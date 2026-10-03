@@ -49,13 +49,17 @@ jobs:
             src-tauri/target/release/bundle/rpm/*.rpm
             src-tauri/target/release/bundle/appimage/*.AppImage
 
+      - name: Short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Publish release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}
-          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Gitcord build #{0} ({1})', github.run_number, substr(github.sha, 0, 7)) }}
+          name: "${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Gitcord build #{0} ({1})', github.run_number, steps.sha.outputs.short) }}"
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
           generate_release_notes: true
           files: |
