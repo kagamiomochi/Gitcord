@@ -60,7 +60,7 @@ jobs:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}
           name: "${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Gitcord build #{0} ({1})', github.run_number, steps.sha.outputs.short) }}"
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          prerelease: false # ${{ !startsWith(github.ref, 'refs/tags/v') }}
           generate_release_notes: true
           files: |
             src-tauri/target/release/bundle/deb/*.deb
