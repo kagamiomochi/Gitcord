@@ -4,11 +4,11 @@
 <style>
 :root{--bg0:#1e1f22;--bg1:#2b2d31;--bg2:#313338;--bg3:#383a40;--tx:#dbdee1;--mu:#949ba4;--ac:#5865f2;--warn:#f0b232;--ok:#23a559;--err:#f23f43}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
-body{background:var(--bg2);color:var(--tx);font:14px/1.45 system-ui,"Noto Sans JP",sans-serif;display:grid;grid-template-columns:240px 1fr 360px;overflow:hidden}
+body{background:var(--bg2);color:var(--tx);font:14px/1.45 system-ui,"Noto Sans JP",sans-serif;display:grid;grid-template-columns:240px minmax(0,1fr) 360px;overflow:hidden}
 button{font:inherit;color:inherit;background:var(--bg3);border:0;border-radius:4px;padding:6px 10px;cursor:pointer}
 button:hover{filter:brightness(1.2)}button:disabled{opacity:.4;cursor:not-allowed}
 button.pri{background:var(--ac);color:#fff}
-.col{display:flex;flex-direction:column;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0;min-width:0}
 #side{background:var(--bg1)}#side h3,#right .tabs{margin:0;padding:12px;border-bottom:1px solid var(--bg0);display:flex;justify-content:space-between;align-items:center;font-size:14px}
 #repos{overflow:auto;flex:1;padding:6px}
 .repo{padding:8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:center}
@@ -32,12 +32,29 @@ button.pri{background:var(--ac);color:#fff}
 #right{background:var(--bg1)}
 .tabs button{background:none;color:var(--mu)}.tabs button.on{color:var(--tx);border-bottom:2px solid var(--ac);border-radius:0}
 #list{flex:1;overflow:auto;padding:8px;min-height:120px}
-#dwrap{display:none;flex:none;height:45%;flex-direction:column;border-top:1px solid var(--bg0);border-bottom:1px solid var(--bg0)}
+#dwrap{display:none;flex:none;min-width:0;height:45%;flex-direction:column;border-top:1px solid var(--bg0);border-bottom:1px solid var(--bg0)}
 #dwrap .dh{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:var(--bg1);color:var(--mu);font-size:12px}
-#diff{flex:1;margin:0;overflow:auto;background:var(--bg0);padding:8px 16px;font:12px/1.4 ui-monospace,monospace;white-space:pre}
-#diff .a{color:#57d98a;background:rgba(35,165,89,.12)}#diff .d{color:#ff7b7e;background:rgba(242,63,67,.12)}#diff .h{color:#7aa2ff}
+#diff{flex:1;min-width:0;min-height:0;margin:0;overflow:auto;background:var(--bg0);padding:8px 16px;font:12px/1.4 ui-monospace,monospace;white-space:pre}
+#diff>div{min-width:max-content}#diff .a{color:#57d98a;background:rgba(35,165,89,.12)}#diff .d{color:#ff7b7e;background:rgba(242,63,67,.12)}#diff .h{color:#7aa2ff}
 .f{padding:2px 6px;border-radius:3px;cursor:pointer;display:flex;gap:6px;align-items:center;white-space:nowrap}
-.f:hover{background:var(--bg3)}details{margin-left:10px}summary{cursor:pointer;color:var(--mu)}
+.f:hover{background:var(--bg3)}.ic{width:15px;height:15px;flex:none}.chev{width:12px;height:12px;flex:none;transition:transform .12s}
+#list .tb{display:flex;gap:4px;position:sticky;top:-8px;background:var(--bg1);padding:8px 0 6px;z-index:1}
+#list .tb input{flex:1;min-width:0;background:var(--bg0);border:0;border-radius:4px;padding:5px 8px;color:var(--tx);font:inherit;font-size:12px;outline:0}
+#list .tb button{font-size:11px;padding:4px 7px;color:var(--mu)}
+.rev{display:flex;justify-content:space-between;color:var(--mu);font-size:12px;padding:2px 6px 6px}
+details>summary{list-style:none;display:flex;gap:6px;align-items:center;padding:3px 6px;border-radius:3px;cursor:pointer;white-space:nowrap}
+details>summary::-webkit-details-marker{display:none}
+details>summary:hover{background:var(--bg3)}
+details[open]>summary .chev{transform:rotate(90deg)}
+details>summary .ic,#fb .ic{color:#7e9cd8}
+.kids{margin-left:12px;padding-left:6px;border-left:1px solid var(--bg3)}
+.nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cn{margin-left:auto;padding-left:10px;color:var(--mu);font-size:11px}
+.f.t{padding:3px 6px}.f.on{background:var(--bg3)}.sp{width:12px;flex:none}
+.cf .cl{display:flex;gap:8px;align-items:baseline;min-width:0;flex:1}.cf .nm{font-weight:600}
+.cf .dir{color:var(--mu);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.chip{width:18px;height:18px;border-radius:3px;display:grid;place-items:center;font:700 11px monospace;flex:none;background:var(--bg3);color:var(--mu)}
+.cM{color:var(--warn)}.cA,.cU{color:var(--ok)}.cD{color:var(--err)}.cR{color:#7aa2ff}
 .st{font:11px monospace;color:var(--warn)}
 #menu{position:fixed;background:var(--bg0);border-radius:6px;padding:4px;display:none;z-index:9;min-width:190px}
 #menu div{padding:6px 10px;border-radius:4px;cursor:pointer}#menu div:hover{background:var(--ac)}
@@ -67,6 +84,11 @@ button.pri{background:var(--ac);color:#fff}
 <div style="display:flex;gap:8px;justify-content:flex-end"><button onclick="closeM()">キャンセル</button><button class="pri" id="ok" onclick="confirmAdd()">追加</button></div></div></div>
 <script>
 const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ICO={dir:'<svg class="ic" viewBox="0 0 16 16"><path d="M1.5 3.5a1 1 0 0 1 1-1h3.2l1.4 1.5h6.4a1 1 0 0 1 1 1v7.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z" fill="currentColor"/></svg>',
+file:'<svg class="ic" viewBox="0 0 16 16"><path d="M3.5 1.5h5.6l3.4 3.4v9a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-11.4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M9 1.7V5h3.3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
+chev:'<svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
+const EC={js:'#e5c34b',mjs:'#e5c34b',ts:'#4a9eff',tsx:'#4a9eff',html:'#e8764b',css:'#5aa9e6',json:'#c9a24b',md:'#8fa3b8',go:'#4fc3d9',mod:'#4fc3d9',rs:'#e0875a',toml:'#b0b0b0',yml:'#d27a7a',yaml:'#d27a7a',sh:'#6bcb77',py:'#5b9bd5',png:'#b57edc',svg:'#b57edc',jpg:'#b57edc'};
+const extColor=n=>EC[(n.split('.').pop()||'').toLowerCase()]||'var(--mu)';
 const PF=['feat','fix','docs','style','refactor','perf','test','chore','none'];
 let S={repos:[],cur:null,commits:[],up:new Set(),sel:null,pf:null,tab:0,mode:0,dir:''};
 $('tr').checked=localStorage.tr!=='0';
@@ -94,14 +116,19 @@ function tab(n){S.tab=n;tabs();drawRight()}function tabs(){$('t0').classList.tog
 function closeDiff(){$('dwrap').style.display='none';$('diff').textContent=''}
 async function drawRight(){const L=$('list');closeDiff();if(!S.cur){L.innerHTML='';return}
 if(S.tab===0){const st=await A('status?repo='+encodeURIComponent(S.cur));
-L.innerHTML=st.length?st.map((f,i)=>`<div class="f"><input type="checkbox" ${f.staged?'checked':''} onchange="stage(${i},this.checked)"><span class="st">${esc(f.x+f.y).replace(/ /g,'·')}</span><span onclick="showDiff(${i})">${esc(f.path)}</span></div>`).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
-else{const paths=await A('tree?repo='+encodeURIComponent(S.cur)+(S.sel?'&rev='+S.sel:''));const root={};paths.filter(Boolean).forEach(p=>{let n=root;p.split('/').forEach((s,i,a)=>{n=n[s]??=(i===a.length-1?p:{})})});
-const R=(n,pre)=>Object.keys(n).sort((a,b)=>(typeof n[b]==='object')-(typeof n[a]==='object')||a.localeCompare(b)).map(k=>typeof n[k]==='object'?`<details><summary>${esc(k)}</summary>${R(n[k])}</details>`:`<div class="f" data-p="${esc(n[k])}" onclick="fileDiff(this.dataset.p)">${esc(k)}</div>`).join('');
-L.innerHTML=(S.sel?`<div class="empty" style="padding:4px">${S.sel.slice(0,8)} 時点</div>`:'<div class="empty" style="padding:4px">HEAD</div>')+(R(root)||'<div class="empty">ファイルなし</div>')}}
+L.innerHTML=st.length?st.map((f,i)=>{const c=f.y!==' '?f.y:f.x,l=c==='?'?'U':c,k=f.path.lastIndexOf('/'),nm=f.path.slice(k+1),dr=k>=0?f.path.slice(0,k):'';return `<div class="f cf"><input type="checkbox" ${f.staged?'checked':''} onchange="stage(${i},this.checked)"><span class="chip c${l}" title="${esc(f.x+f.y)}">${l}</span><span class="cl" onclick="showDiff(${i})"><span class="nm">${esc(nm)}</span><span class="dir">${esc(dr)}</span></span></div>`}).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
+else{S._paths=(await A('tree?repo='+encodeURIComponent(S.cur)+(S.sel?'&rev='+S.sel:''))).filter(Boolean);
+L.innerHTML=`<div class="tb"><input id="ff" placeholder="ファイルを絞り込み" value="${esc(S.q||'')}" oninput="S.q=this.value;drawTree()"><button onclick="fold(1)">展開</button><button onclick="fold(0)">折りたたみ</button></div><div class="rev"><span>${S.sel?S.sel.slice(0,8)+' 時点':'HEAD'}</span><span>${S._paths.length} ファイル</span></div><div id="tree"></div>`;drawTree()}}
+function fold(o){document.querySelectorAll('#tree details').forEach(d=>d.open=!!o)}
+function drawTree(){const q=(S.q||'').toLowerCase(),root={};
+(q?S._paths.filter(p=>p.toLowerCase().includes(q)):S._paths).forEach(p=>{let n=root;p.split('/').forEach((s,i,a)=>{n=n[s]??=(i===a.length-1?p:{})})});
+const cnt=n=>Object.values(n).reduce((a,v)=>a+(typeof v==='object'?cnt(v):1),0);
+const R=(n,d)=>Object.keys(n).sort((a,b)=>(typeof n[b]==='object')-(typeof n[a]==='object')||a.localeCompare(b)).map(k=>typeof n[k]==='object'?`<details ${d===0||q?'open':''}><summary>${ICO.chev}${ICO.dir}<span class="nm">${esc(k)}</span><span class="cn">${cnt(n[k])}</span></summary><div class="kids">${R(n[k],d+1)}</div></details>`:`<div class="f t ${S.file===n[k]?'on':''}" data-p="${esc(n[k])}" onclick="fileDiff(this.dataset.p)"><span class="sp"></span><span style="color:${extColor(k)};display:flex">${ICO.file}</span><span class="nm">${esc(k)}</span></div>`).join('');
+$('tree').innerHTML=R(root,0)||'<div class="empty">'+(q?'一致するファイルがありません':'ファイルなし')+'</div>'}
 async function stage(i,on){await T(async()=>{await A('stage',{repo:S.cur,paths:[S._st[i].path],stage:on});drawRight()})}
 function paint(t,n){$('dname').textContent=n;$('dwrap').style.display='flex';$('diff').scrollTop=0;$('diff').innerHTML=esc(t).split('\n').map(l=>`<div class="${l[0]==='+'&&!l.startsWith('+++')?'a':l[0]==='-'&&!l.startsWith('---')?'d':l.startsWith('@@')?'h':''}">${l||' '}</div>`).join('')}
 async function showDiff(i){const f=S._st[i];paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(f.path)}&staged=${f.staged&&f.y===' '?1:0}`),f.path)}
-async function fileDiff(p){paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`),p+(S.sel?'  @ '+S.sel.slice(0,8):''))}
+async function fileDiff(p){S.file=p;document.querySelectorAll('#tree .f').forEach(e=>e.classList.toggle('on',e.dataset.p===p));paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`),p+(S.sel?'  @ '+S.sel.slice(0,8):''))}
 async function doCommit(){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m))m=await A('translate',{text:m});
 if(S.pf!=='none')m=S.pf+': '+m;await A('commit',{repo:S.cur,message:m});$('msg').value='';S.pf=null;setPf(null);await refresh(true)})}
 function doPush(){if(!S.cur)return;T(async()=>{await A('push',{repo:S.cur});toast2('pushしました');refresh()})}
@@ -109,7 +136,7 @@ function doPush(){if(!S.cur)return;T(async()=>{await A('push',{repo:S.cur});toas
 function openAdd(){$('modal').style.display='grid';mtab(0);browse('')}function closeM(){$('modal').style.display='none'}
 function mtab(n){S.mode=n;$('clone').style.display=n?'block':'none';$('m0').className=n?'':'pri';$('m1').className=n?'pri':'';$('ok').textContent=n?'ここにclone':'このディレクトリを追加'}
 async function browse(p){T(async()=>{const r=await A('ls?path='+encodeURIComponent(p));S.dir=r.path;$('path').value=r.path;
-$('fb').innerHTML=`<div class="f" data-p="${esc(r.parent)}" onclick="browse(this.dataset.p)">..</div>`+r.entries.map(e=>`<div class="f" data-p="${esc(r.path.replace(/\/$/,'')+'/'+e.name)}" onclick="browse(this.dataset.p)">${esc(e.name)} ${e.git?'<span class="badge">Git</span>':''}</div>`).join('');
+$('fb').innerHTML=`<div class="f" data-p="${esc(r.parent)}" onclick="browse(this.dataset.p)">..</div>`+r.entries.map(e=>`<div class="f" data-p="${esc(r.path.replace(/\/$/,'')+'/'+e.name)}" onclick="browse(this.dataset.p)">${ICO.dir}<span class="nm">${esc(e.name)}</span>${e.git?'<span class="badge" style="margin-left:auto">Git</span>':''}</div>`).join('');
 $('ok').dataset.git=r.git?1:''})}
 $('curl').oninput=()=>{if(!$('cname').dataset.u)$('cname').value=$('curl').value.replace(/\/+$/,'').split(/[\/:]/).pop().replace(/\.git$/,'')};$('cname').oninput=()=>$('cname').dataset.u=1;
 function confirmAdd(){T(async()=>{if(S.mode){await A('clone',{url:$('curl').value.trim(),dir:S.dir,name:$('cname').value.trim()})}else await A('add',{path:S.dir});closeM();await loadRepos()})}
