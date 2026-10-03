@@ -129,7 +129,7 @@ async function stage(i,on){await T(async()=>{await A('stage',{repo:S.cur,paths:[
 function paint(t,n){$('dname').textContent=n;$('dwrap').style.display='flex';$('diff').scrollTop=0;$('diff').innerHTML=esc(t).split('\n').map(l=>`<div class="${l[0]==='+'&&!l.startsWith('+++')?'a':l[0]==='-'&&!l.startsWith('---')?'d':l.startsWith('@@')?'h':''}">${l||' '}</div>`).join('')}
 async function showDiff(i){const f=S._st[i];paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(f.path)}&staged=${f.staged&&f.y===' '?1:0}`),f.path)}
 async function fileDiff(p){S.file=p;document.querySelectorAll('#tree .f').forEach(e=>e.classList.toggle('on',e.dataset.p===p));paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`),p+(S.sel?'  @ '+S.sel.slice(0,8):''))}
-async function doCommit(){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m))m=await A('translate',{text:m});
+async function doCommit(){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m)){try{m=await A('translate',{text:m})}catch(e){if(!confirm('英訳に失敗しました: '+e.message+'\n原文のままコミットしますか?'))return}}
 if(S.pf!=='none')m=S.pf+': '+m;await A('commit',{repo:S.cur,message:m});$('msg').value='';S.pf=null;setPf(null);await refresh(true)})}
 function doPush(){if(!S.cur)return;T(async()=>{await A('push',{repo:S.cur});toast2('pushしました');refresh()})}
 // add dialog
