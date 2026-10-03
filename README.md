@@ -83,10 +83,12 @@ npx tauri build --no-bundle
 ./src-tauri/target/release/gitcord
 ```
 
-Tauriなしでバックエンドだけを動かして、ブラウザで試すこともできます。
+Tauriなしでバックエンドだけを動かして、ブラウザで試すこともできます。`http://127.0.0.1:8484`
 
 ```
-go build -o gitcord . && ./gitcord   # http://127.0.0.1:8484
+go build -o gitcord .
+chmod +x gitcord
+./gitcord
 ```
 
 ### 構成
