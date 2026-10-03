@@ -28,6 +28,7 @@ button.pri{background:var(--ac);color:#fff}
 #comp textarea{background:transparent;border:0;outline:0;color:var(--tx);font:inherit;resize:none;height:44px}
 .row2{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .pf button.on{background:var(--ac);color:#fff}
+.pushmode #msg,.pushmode #pf,.pushmode .sw{opacity:.4;pointer-events:none}
 .sw{margin-left:auto;color:var(--mu);display:flex;gap:6px;align-items:center}
 #right{background:var(--bg1)}
 .tabs button{background:none;color:var(--mu)}.tabs button.on{color:var(--tx);border-bottom:2px solid var(--ac);border-radius:0}
@@ -72,7 +73,7 @@ details>summary .ic,#fb .ic{color:#7e9cd8}
 <div id="dwrap"><div class="dh"><span id="dname"></span><button onclick="closeDiff()">閉じる</button></div><pre id="diff"></pre></div>
 <div id="comp"><div class="box">
 <textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterでコミット)"></textarea>
-<div class="row2"><button class="pri" id="send" disabled onclick="doCommit()">コミット</button>
+<div class="row2"><button class="pri" id="send" disabled onclick="act()">コミット</button>
 <span class="pf row2" id="pf"></span>
 <label class="sw"><input type="checkbox" id="tr" checked onchange="localStorage.tr=this.checked?1:0">英訳</label></div></div></div></div>
 <div id="right" class="col"><div class="tabs"><span><button id="t0" class="on" onclick="tab(0)">変更</button><button id="t1" onclick="tab(1)">ファイル</button></span><button onclick="doPush()">push</button></div>
@@ -90,19 +91,27 @@ chev:'<svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5l4.5 4.5L6 12.5" fill
 const EC={js:'#e5c34b',mjs:'#e5c34b',ts:'#4a9eff',tsx:'#4a9eff',html:'#e8764b',css:'#5aa9e6',json:'#c9a24b',md:'#8fa3b8',go:'#4fc3d9',mod:'#4fc3d9',rs:'#e0875a',toml:'#b0b0b0',yml:'#d27a7a',yaml:'#d27a7a',sh:'#6bcb77',py:'#5b9bd5',png:'#b57edc',svg:'#b57edc',jpg:'#b57edc'};
 const extColor=n=>EC[(n.split('.').pop()||'').toLowerCase()]||'var(--mu)';
 const PF=['feat','fix','docs','style','refactor','perf','test','chore','none'];
-let S={repos:[],cur:null,commits:[],up:new Set(),sel:null,pf:null,tab:0,mode:0,dir:''};
+let S={dirty:true,repos:[],cur:null,commits:[],up:new Set(),sel:null,pf:null,tab:0,mode:0,dir:''};
 $('tr').checked=localStorage.tr!=='0';
 async function A(p,b){const r=await fetch('/api/'+p,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});const j=await r.json();if(!r.ok)throw new Error(j.error);return j}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',5000)}
 const T=f=>f().catch(e=>toast(e.message));
 $('pf').innerHTML=PF.map(p=>`<button data-p="${p}" onclick="setPf('${p}')">${p}</button>`).join('');
 function setPf(p){S.pf=p;document.querySelectorAll('#pf button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));upd()}
-function upd(){$('send').disabled=!(S.cur&&S.pf&&$('msg').value.trim())}
-$('msg').oninput=upd;$('msg').onkeydown=e=>{if(e.key==='Enter'&&e.ctrlKey&&!$('send').disabled)doCommit()};
+// Push mode: a repo is selected and there are no uncommitted changes
+const pushMode=()=>!!S.cur&&!S.dirty;
+function upd(){const p=pushMode();$('send').textContent=p?'プッシュ':'コミット';
+$('msg').placeholder=p?'未コミットの変更はありません (Ctrl+Enterでpush)':'コミットメッセージ (Ctrl+Enterでコミット)';
+$('comp').classList.toggle('pushmode',p);
+$('send').disabled=p?false:!(S.cur&&S.pf&&$('msg').value.trim())}
+function act(){if($('send').disabled)return;pushMode()?doPush():doCommit()}
+// Re-check whether uncommitted files remain, independent of the active tab
+async function chk(){if(!S.cur)return;const st=await A('status?repo='+encodeURIComponent(S.cur));S.dirty=st.length>0;upd()}
+$('msg').oninput=upd;$('msg').onkeydown=e=>{if(e.key==='Enter'&&e.ctrlKey)act()};
 async function loadRepos(){S.repos=await A('repos');$('repos').innerHTML=S.repos.map(p=>`<div class="repo ${p===S.cur?'on':''}" data-p="${esc(p)}" oncontextmenu="repoMenu(event,this.dataset.p)" onclick="pick(this.dataset.p)"><div class="av">${esc(p.split('/').pop()[0]||'?').toUpperCase()}</div><div><b>${esc(p.split('/').pop())}</b><small>${esc(p)}</small></div></div>`).join('')||'<div class="empty">＋で追加</div>'}
 function repoMenu(e,p){e.preventDefault();menu(e,[['一覧から外す',()=>T(async()=>{await A('remove',{path:p});if(S.cur===p)S.cur=null;loadRepos()}),'x']])}
 async function pick(p){S.cur=p;S.sel=null;$('head').textContent=p.split('/').pop();loadRepos();await refresh(true);}
-async function refresh(bottom){if(!S.cur)return;const l=await A('log?repo='+encodeURIComponent(S.cur));S.commits=l.commits.reverse();S.up=new Set(l.unpushed);drawLog(bottom);drawRight();upd()}
+async function refresh(bottom){if(!S.cur)return;const l=await A('log?repo='+encodeURIComponent(S.cur));S.commits=l.commits.reverse();S.up=new Set(l.unpushed);await chk();drawLog(bottom);drawRight()}
 function drawLog(bottom){const m=$('msgs');const keep=m.scrollHeight-m.scrollTop;
 m.innerHTML=(S.commits.length?'<div class="first">first commit はここから</div>':'<div class="empty">コミットはまだありません</div>')+S.commits.map(c=>`<div class="c ${S.up.has(c.Hash)?'up':''} ${S.sel===c.Hash?'sel':''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av">${esc(c.Author[0]||'?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time*1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash)?'<span class="tag">未プッシュ</span>':''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0,8)}</code></div></div>`).join('');
 m.scrollTop=bottom?m.scrollHeight:m.scrollHeight-keep}
@@ -140,5 +149,6 @@ $('fb').innerHTML=`<div class="f" data-p="${esc(r.parent)}" onclick="browse(this
 $('ok').dataset.git=r.git?1:''})}
 $('curl').oninput=()=>{if(!$('cname').dataset.u)$('cname').value=$('curl').value.replace(/\/+$/,'').split(/[\/:]/).pop().replace(/\.git$/,'')};$('cname').oninput=()=>$('cname').dataset.u=1;
 function confirmAdd(){T(async()=>{if(S.mode){await A('clone',{url:$('curl').value.trim(),dir:S.dir,name:$('cname').value.trim()})}else await A('add',{path:S.dir});closeM();await loadRepos()})}
+window.addEventListener('focus',()=>{if(S.cur)T(async()=>{await chk();if(S.tab===0)drawRight()})});
 loadRepos();
 </script></body></html>
