@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>Gitcord</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg0:#1e1f22;--bg1:#2b2d31;--bg2:#313338;--bg3:#383a40;--tx:#dbdee1;--mu:#949ba4;--ac:#5865f2;--warn:#f0b232;--ok:#23a559;--err:#f23f43}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg2);color:var(--tx);font:14px/1.45 system-ui,"Noto Sans JP",sans-serif;display:grid;grid-template-columns:240px 1fr 360px;overflow:hidden}
+button{font:inherit;color:inherit;background:var(--bg3);border:0;border-radius:4px;padding:6px 10px;cursor:pointer}
+button:hover{filter:brightness(1.2)}button:disabled{opacity:.4;cursor:not-allowed}
+button.pri{background:var(--ac);color:#fff}
+.col{display:flex;flex-direction:column;min-height:0}
+#side{background:var(--bg1)}#side h3,#right .tabs{margin:0;padding:12px;border-bottom:1px solid var(--bg0);display:flex;justify-content:space-between;align-items:center;font-size:14px}
+#repos{overflow:auto;flex:1;padding:6px}
+.repo{padding:8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.repo:hover,.repo.on{background:var(--bg3)}
+.av{width:32px;height:32px;border-radius:50%;background:var(--ac);display:grid;place-items:center;font-weight:700;flex:none}
+.repo small{color:var(--mu);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+#head{padding:12px 16px;border-bottom:1px solid var(--bg0);font-weight:600}
+#msgs{flex:1;overflow:auto;padding:8px 0}
+.c{padding:6px 16px 6px 13px;border-left:3px solid transparent;display:flex;gap:12px;cursor:pointer}
+.c:hover{background:#2e3035}.c.sel{background:#35373d}
+.c.up{border-left-color:var(--warn);background:rgba(240,178,50,.08)}
+.c .m{min-width:0}.c b{margin-right:8px}.c time{color:var(--mu);font-size:12px}
+.c code{color:var(--mu);font-size:12px}.tag{color:var(--warn);font-size:12px;margin-left:6px}
+.first{text-align:center;color:var(--mu);padding:16px}
+#comp{padding:0 16px 16px}
+#comp .box{background:var(--bg3);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px}
+#comp textarea{background:transparent;border:0;outline:0;color:var(--tx);font:inherit;resize:none;height:44px}
+.row2{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pf button.on{background:var(--ac);color:#fff}
+.sw{margin-left:auto;color:var(--mu);display:flex;gap:6px;align-items:center}
+#right{background:var(--bg1)}
+.tabs button{background:none;color:var(--mu)}.tabs button.on{color:var(--tx);border-bottom:2px solid var(--ac);border-radius:0}
+#list{flex:1;overflow:auto;padding:8px;min-height:120px}
+#dwrap{display:none;flex:none;height:45%;flex-direction:column;border-top:1px solid var(--bg0);border-bottom:1px solid var(--bg0)}
+#dwrap .dh{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:var(--bg1);color:var(--mu);font-size:12px}
+#diff{flex:1;margin:0;overflow:auto;background:var(--bg0);padding:8px 16px;font:12px/1.4 ui-monospace,monospace;white-space:pre}
+#diff .a{color:#57d98a;background:rgba(35,165,89,.12)}#diff .d{color:#ff7b7e;background:rgba(242,63,67,.12)}#diff .h{color:#7aa2ff}
+.f{padding:2px 6px;border-radius:3px;cursor:pointer;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.f:hover{background:var(--bg3)}details{margin-left:10px}summary{cursor:pointer;color:var(--mu)}
+.st{font:11px monospace;color:var(--warn)}
+#menu{position:fixed;background:var(--bg0);border-radius:6px;padding:4px;display:none;z-index:9;min-width:190px}
+#menu div{padding:6px 10px;border-radius:4px;cursor:pointer}#menu div:hover{background:var(--ac)}
+#menu .x{color:var(--err)}
+#modal{position:fixed;inset:0;background:#0009;display:none;place-items:center;z-index:8}
+#modal .p{background:var(--bg2);border-radius:8px;width:560px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;padding:16px;gap:10px}
+#modal input{background:var(--bg0);border:0;color:var(--tx);border-radius:4px;padding:7px;width:100%;font:inherit}
+#fb{overflow:auto;height:280px;background:var(--bg1);border-radius:4px;padding:4px}
+.badge{background:var(--ok);color:#fff;font-size:11px;border-radius:3px;padding:0 5px}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--err);color:#fff;padding:8px 14px;border-radius:6px;display:none;max-width:80vw;white-space:pre-wrap;z-index:10}
+.empty{color:var(--mu);padding:30px;text-align:center}
+</style></head><body>
+<div id="side" class="col"><h3>Gitディレクトリ<button onclick="openAdd()" title="追加">＋</button></h3><div id="repos"></div></div>
+<div id="mid" class="col"><div id="head">Gitディレクトリを選択してください</div><div id="msgs"></div>
+<div id="dwrap"><div class="dh"><span id="dname"></span><button onclick="closeDiff()">閉じる</button></div><pre id="diff"></pre></div>
+<div id="comp"><div class="box">
+<textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterでコミット)"></textarea>
+<div class="row2"><button class="pri" id="send" disabled onclick="doCommit()">コミット</button>
+<span class="pf row2" id="pf"></span>
+<label class="sw"><input type="checkbox" id="tr" checked onchange="localStorage.tr=this.checked?1:0">英訳</label></div></div></div></div>
+<div id="right" class="col"><div class="tabs"><span><button id="t0" class="on" onclick="tab(0)">変更</button><button id="t1" onclick="tab(1)">ファイル</button></span><button onclick="doPush()">push</button></div>
+<div id="list"></div></div>
+<div id="menu"></div><div id="toast"></div>
+<div id="modal"><div class="p"><div><button id="m0" onclick="mtab(0)">既存を追加</button> <button id="m1" onclick="mtab(1)">cloneして追加</button></div>
+<div id="clone" style="display:none"><input id="curl" placeholder="リポジトリURL"><br><br><input id="cname" placeholder="ディレクトリ名"></div>
+<input id="path" onchange="browse(this.value)"><div id="fb"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button onclick="closeM()">キャンセル</button><button class="pri" id="ok" onclick="confirmAdd()">追加</button></div></div></div>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PF=['feat','fix','docs','style','refactor','perf','test','chore','none'];
+let S={repos:[],cur:null,commits:[],up:new Set(),sel:null,pf:null,tab:0,mode:0,dir:''};
+$('tr').checked=localStorage.tr!=='0';
+async function A(p,b){const r=await fetch('/api/'+p,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});const j=await r.json();if(!r.ok)throw new Error(j.error);return j}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',5000)}
+const T=f=>f().catch(e=>toast(e.message));
+$('pf').innerHTML=PF.map(p=>`<button data-p="${p}" onclick="setPf('${p}')">${p}</button>`).join('');
+function setPf(p){S.pf=p;document.querySelectorAll('#pf button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));upd()}
+function upd(){$('send').disabled=!(S.cur&&S.pf&&$('msg').value.trim())}
+$('msg').oninput=upd;$('msg').onkeydown=e=>{if(e.key==='Enter'&&e.ctrlKey&&!$('send').disabled)doCommit()};
+async function loadRepos(){S.repos=await A('repos');$('repos').innerHTML=S.repos.map(p=>`<div class="repo ${p===S.cur?'on':''}" data-p="${esc(p)}" oncontextmenu="repoMenu(event,this.dataset.p)" onclick="pick(this.dataset.p)"><div class="av">${esc(p.split('/').pop()[0]||'?').toUpperCase()}</div><div><b>${esc(p.split('/').pop())}</b><small>${esc(p)}</small></div></div>`).join('')||'<div class="empty">＋で追加</div>'}
+function repoMenu(e,p){e.preventDefault();menu(e,[['一覧から外す',()=>T(async()=>{await A('remove',{path:p});if(S.cur===p)S.cur=null;loadRepos()}),'x']])}
+async function pick(p){S.cur=p;S.sel=null;$('head').textContent=p.split('/').pop();loadRepos();await refresh(true);}
+async function refresh(bottom){if(!S.cur)return;const l=await A('log?repo='+encodeURIComponent(S.cur));S.commits=l.commits.reverse();S.up=new Set(l.unpushed);drawLog(bottom);drawRight();upd()}
+function drawLog(bottom){const m=$('msgs');const keep=m.scrollHeight-m.scrollTop;
+m.innerHTML=(S.commits.length?'<div class="first">first commit はここから</div>':'<div class="empty">コミットはまだありません</div>')+S.commits.map(c=>`<div class="c ${S.up.has(c.Hash)?'up':''} ${S.sel===c.Hash?'sel':''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av">${esc(c.Author[0]||'?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time*1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash)?'<span class="tag">未プッシュ</span>':''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0,8)}</code></div></div>`).join('');
+m.scrollTop=bottom?m.scrollHeight:m.scrollHeight-keep}
+function selC(h){S.sel=S.sel===h?null:h;if(S.sel)S.tab=1;drawLog();tabs();drawRight()}
+function cMenu(e,h){e.preventDefault();const run=(a,msg)=>()=>{if(msg&&!confirm(msg))return;T(async()=>{await A('action',{repo:S.cur,hash:h,action:a});await refresh();toast2('完了')})};
+menu(e,S.up.has(h)?[['reset --soft (変更を残す・ステージ維持)',run('soft')],['reset --mixed (変更を残す)',run('mixed')],['reset --hard (変更を破棄)',run('hard','このコミットまで戻し、以降の変更を破棄します。よろしいですか?'),'x']]:[['revert (打ち消しコミットを作成)',run('revert')]])}
+function toast2(m){const t=$('toast');t.style.background='var(--ok)';toast(m);setTimeout(()=>t.style.background='var(--err)',5200)}
+function menu(e,items){const m=$('menu');m.innerHTML='';items.forEach(([l,f,c])=>{const d=document.createElement('div');d.textContent=l;if(c)d.className=c;d.onclick=()=>{m.style.display='none';f()};m.append(d)});m.style.left=Math.min(e.clientX,innerWidth-210)+'px';m.style.top=Math.min(e.clientY,innerHeight-items.length*34-10)+'px';m.style.display='block'}
+document.addEventListener('click',()=>$('menu').style.display='none');
+function tab(n){S.tab=n;tabs();drawRight()}function tabs(){$('t0').classList.toggle('on',S.tab===0);$('t1').classList.toggle('on',S.tab===1)}
+function closeDiff(){$('dwrap').style.display='none';$('diff').textContent=''}
+async function drawRight(){const L=$('list');closeDiff();if(!S.cur){L.innerHTML='';return}
+if(S.tab===0){const st=await A('status?repo='+encodeURIComponent(S.cur));
+L.innerHTML=st.length?st.map((f,i)=>`<div class="f"><input type="checkbox" ${f.staged?'checked':''} onchange="stage(${i},this.checked)"><span class="st">${esc(f.x+f.y).replace(/ /g,'·')}</span><span onclick="showDiff(${i})">${esc(f.path)}</span></div>`).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
+else{const paths=await A('tree?repo='+encodeURIComponent(S.cur)+(S.sel?'&rev='+S.sel:''));const root={};paths.filter(Boolean).forEach(p=>{let n=root;p.split('/').forEach((s,i,a)=>{n=n[s]??=(i===a.length-1?p:{})})});
+const R=(n,pre)=>Object.keys(n).sort((a,b)=>(typeof n[b]==='object')-(typeof n[a]==='object')||a.localeCompare(b)).map(k=>typeof n[k]==='object'?`<details><summary>${esc(k)}</summary>${R(n[k])}</details>`:`<div class="f" data-p="${esc(n[k])}" onclick="fileDiff(this.dataset.p)">${esc(k)}</div>`).join('');
+L.innerHTML=(S.sel?`<div class="empty" style="padding:4px">${S.sel.slice(0,8)} 時点</div>`:'<div class="empty" style="padding:4px">HEAD</div>')+(R(root)||'<div class="empty">ファイルなし</div>')}}
+async function stage(i,on){await T(async()=>{await A('stage',{repo:S.cur,paths:[S._st[i].path],stage:on});drawRight()})}
+function paint(t,n){$('dname').textContent=n;$('dwrap').style.display='flex';$('diff').scrollTop=0;$('diff').innerHTML=esc(t).split('\n').map(l=>`<div class="${l[0]==='+'&&!l.startsWith('+++')?'a':l[0]==='-'&&!l.startsWith('---')?'d':l.startsWith('@@')?'h':''}">${l||' '}</div>`).join('')}
+async function showDiff(i){const f=S._st[i];paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(f.path)}&staged=${f.staged&&f.y===' '?1:0}`),f.path)}
+async function fileDiff(p){paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`),p+(S.sel?'  @ '+S.sel.slice(0,8):''))}
+async function doCommit(){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m))m=await A('translate',{text:m});
+if(S.pf!=='none')m=S.pf+': '+m;await A('commit',{repo:S.cur,message:m});$('msg').value='';S.pf=null;setPf(null);await refresh(true)})}
+function doPush(){if(!S.cur)return;T(async()=>{await A('push',{repo:S.cur});toast2('pushしました');refresh()})}
+// add dialog
+function openAdd(){$('modal').style.display='grid';mtab(0);browse('')}function closeM(){$('modal').style.display='none'}
+function mtab(n){S.mode=n;$('clone').style.display=n?'block':'none';$('m0').className=n?'':'pri';$('m1').className=n?'pri':'';$('ok').textContent=n?'ここにclone':'このディレクトリを追加'}
+async function browse(p){T(async()=>{const r=await A('ls?path='+encodeURIComponent(p));S.dir=r.path;$('path').value=r.path;
+$('fb').innerHTML=`<div class="f" data-p="${esc(r.parent)}" onclick="browse(this.dataset.p)">..</div>`+r.entries.map(e=>`<div class="f" data-p="${esc(r.path.replace(/\/$/,'')+'/'+e.name)}" onclick="browse(this.dataset.p)">${esc(e.name)} ${e.git?'<span class="badge">Git</span>':''}</div>`).join('');
+$('ok').dataset.git=r.git?1:''})}
+$('curl').oninput=()=>{if(!$('cname').dataset.u)$('cname').value=$('curl').value.replace(/\/+$/,'').split(/[\/:]/).pop().replace(/\.git$/,'')};$('cname').oninput=()=>$('cname').dataset.u=1;
+function confirmAdd(){T(async()=>{if(S.mode){await A('clone',{url:$('curl').value.trim(),dir:S.dir,name:$('cname').value.trim()})}else await A('add',{path:S.dir});closeM();await loadRepos()})}
+loadRepos();
+</script></body></html>
