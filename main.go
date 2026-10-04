@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -28,12 +29,29 @@ func git(repo string, args ...string) (string, error) {
 		a = append([]string{"-C", repo}, args...)
 	}
 	c := exec.Command("git", a...)
-	c.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8")
-	out, err := c.CombinedOutput()
-	if err != nil {
-		return string(out), errors.New(strings.TrimSpace(string(out)))
+
+	// Do not leak AppImage's bundled library path into system git
+	env := []string{}
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(e, "LD_LIBRARY_PATH=") || strings.HasPrefix(e, "LD_PRELOAD=") {
+			continue
+		}
+		env = append(env, e)
 	}
-	return string(out), nil
+	c.Env = append(env, "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8")
+
+	// Keep stdout and stderr separate so warnings never end up in parsed output
+	var stdout, stderr bytes.Buffer
+	c.Stdout = &stdout
+	c.Stderr = &stderr
+	if err := c.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = strings.TrimSpace(stdout.String())
+		}
+		return stdout.String(), errors.New(msg)
+	}
+	return stdout.String(), nil
 }
 
 func repos() []string {
