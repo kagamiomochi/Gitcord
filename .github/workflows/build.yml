@@ -3,7 +3,6 @@ name: build
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -29,6 +28,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: src-tauri }
+
+      - name: Set version from run number
+        run: |
+          # Override version only inside the CI workspace (not committed)
+          jq --arg v "0.0.${{ github.run_number }}" '.version = $v' \
+            src-tauri/tauri.conf.json > tmp.json
+          mv tmp.json src-tauri/tauri.conf.json
 
       - name: Build Go sidecar
         run: |
@@ -57,10 +63,11 @@ jobs:
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
+          # Every push to main becomes a numbered build release
+          tag_name: build-${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          name: "${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Gitcord build #{0} ({1})', github.run_number, steps.sha.outputs.short) }}"
-          prerelease: false # ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          name: "Gitcord build #${{ github.run_number }} (${{ steps.sha.outputs.short }})"
+          prerelease: false
           generate_release_notes: true
           files: |
             src-tauri/target/release/bundle/deb/*.deb
