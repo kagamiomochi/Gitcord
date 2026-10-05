@@ -56,17 +56,17 @@ body.dv #msgs{display:none}
 .r.a{background:rgba(35,165,89,.14)}.r.a .s{color:var(--ok)}
 .r.d{background:rgba(242,63,67,.14)}.r.d .s{color:var(--err)}
 .r.a mark{background:rgba(35,165,89,.38)}.r.d mark{background:rgba(242,63,67,.38)}
-.r mark,.sp mark{color:inherit;border-radius:2px}
+.r mark,.sbs mark{color:inherit;border-radius:2px}
 .r.h{display:block;margin:8px 0 2px;padding:3px 16px;background:rgba(88,101,242,.14);color:#7aa2ff;font-size:12px}
 .r.m{display:block;padding:2px 16px;color:var(--mu);font-style:italic}
-#diff>.db.sp{min-width:0}
-.sp .r{grid-template-columns:3.2em minmax(0,1fr) 3.2em minmax(0,1fr)}
-.sp .r.h,.sp .r.m{display:block}
-.sp .t{white-space:pre-wrap;overflow-wrap:anywhere;padding-right:8px}
-.sp .g.a,.sp .t.a{background:rgba(35,165,89,.14)}.sp .g.d,.sp .t.d{background:rgba(242,63,67,.14)}
-.sp .t.a mark{background:rgba(35,165,89,.38)}.sp .t.d mark{background:rgba(242,63,67,.38)}
-.sp .g.e,.sp .t.e{background:repeating-linear-gradient(135deg,transparent 0 4px,rgba(255,255,255,.03) 4px 8px)}
-.sp .r>:nth-child(3){border-left:1px solid var(--bg3)}
+#diff>.db.sbs{min-width:0}
+.sbs .r{grid-template-columns:3.2em minmax(0,1fr) 3.2em minmax(0,1fr)}
+.sbs .r.h,.sbs .r.m{display:block}
+.sbs .t{white-space:pre-wrap;overflow-wrap:anywhere;padding-right:8px}
+.sbs .g.a,.sbs .t.a{background:rgba(35,165,89,.14)}.sbs .g.d,.sbs .t.d{background:rgba(242,63,67,.14)}
+.sbs .t.a mark{background:rgba(35,165,89,.38)}.sbs .t.d mark{background:rgba(242,63,67,.38)}
+.sbs .g.e,.sbs .t.e{background:repeating-linear-gradient(135deg,transparent 0 4px,rgba(255,255,255,.03) 4px 8px)}
+.sbs .r>:nth-child(3){border-left:1px solid var(--bg3)}
 .f{padding:2px 6px;border-radius:3px;cursor:pointer;display:flex;gap:6px;align-items:center;white-space:nowrap}
 .f:hover{background:var(--bg3)}.ic{width:15px;height:15px;flex:none}.chev{width:12px;height:12px;flex:none;transition:transform .12s}
 #list .tb{display:flex;gap:4px;position:sticky;top:-8px;background:var(--bg1);padding:8px 0 6px;z-index:1}
@@ -223,7 +223,7 @@ else if(r.k==='a'){out.push({l:null,r});i++}
 else if(r.k==='c'){out.push({l:r,r});i++}
 else{out.push({full:r});i++}}
 const side=(r,ln)=>r?`<span class="g ${r.k}">${r[ln]}</span><span class="t ${r.k}">${cellH(r)}</span>`:'<span class="g e"></span><span class="t e"></span>';
-return '<div class="db sp">'+out.map(p=>p.full?(p.full.k==='h'?hunkRow(p.full):noteRow(p.full)):`<div class="r">${side(p.l,'o')}${side(p.r,'n')}</div>`).join('')+'</div>'}
+return '<div class="db sbs">'+out.map(p=>p.full?(p.full.k==='h'?hunkRow(p.full):noteRow(p.full)):`<div class="r">${side(p.l,'o')}${side(p.r,'n')}</div>`).join('')+'</div>'}
 function showDw(){$('dwrap').style.display='flex';document.body.classList.add('dv')}
 // Closing the viewer brings the commit log back
 function closeDiff(){$('dwrap').style.display='none';document.body.classList.remove('dv');$('diff').textContent=''}
