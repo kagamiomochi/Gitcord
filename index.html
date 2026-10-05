@@ -28,6 +28,11 @@ button.pri{background:var(--ac);color:#fff}
 #comp textarea{background:transparent;border:0;outline:0;color:var(--tx);font:inherit;resize:none;height:44px}
 .row2{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .pf button.on{background:var(--ac);color:#fff}
+.split{position:relative;display:flex}
+.split #send{border-radius:4px 0 0 4px}
+.split #sendm{border-radius:0 4px 4px 0;margin-left:1px;padding:6px 7px}
+#sm{display:none;position:absolute;bottom:100%;left:0;margin-bottom:4px;background:var(--bg0);border-radius:6px;padding:4px;min-width:200px;white-space:nowrap;z-index:9}
+#sm div{padding:6px 10px;border-radius:4px;cursor:pointer}#sm div:hover{background:var(--ac)}
 .pushmode #msg,.pushmode #pf,.pushmode .sw{opacity:.4;pointer-events:none}
 .sw{margin-left:auto;color:var(--mu);display:flex;gap:6px;align-items:center}
 #right{background:var(--bg1)}
@@ -72,8 +77,8 @@ details>summary .ic,#fb .ic{color:#7e9cd8}
 <div id="mid" class="col"><div id="head">Gitディレクトリを選択してください</div><div id="msgs"></div>
 <div id="dwrap"><div class="dh"><span id="dname"></span><button onclick="closeDiff()">閉じる</button></div><pre id="diff"></pre></div>
 <div id="comp"><div class="box">
-<textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterでコミット)"></textarea>
-<div class="row2"><button class="pri" id="send" disabled onclick="act()">コミット</button>
+<textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterで送信: コミット→push)"></textarea>
+<div class="row2"><span class="split"><button class="pri" id="send" disabled onclick="act()">送信</button><button class="pri" id="sendm" disabled onclick="toggleSm(event)" title="送信オプション">&#9662;</button><div id="sm"><div onclick="commitOnly()">コミットのみ (pushしない)</div></div></span>
 <span class="pf row2" id="pf"></span>
 <label class="sw"><input type="checkbox" id="tr" checked onchange="localStorage.tr=this.checked?1:0">英訳</label></div></div></div></div>
 <div id="right" class="col"><div class="tabs"><span><button id="t0" class="on" onclick="tab(0)">変更</button><button id="t1" onclick="tab(1)">ファイル</button></span><button onclick="doPush()">push</button></div>
@@ -91,7 +96,7 @@ chev:'<svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5l4.5 4.5L6 12.5" fill
 const EC={js:'#e5c34b',mjs:'#e5c34b',ts:'#4a9eff',tsx:'#4a9eff',html:'#e8764b',css:'#5aa9e6',json:'#c9a24b',md:'#8fa3b8',go:'#4fc3d9',mod:'#4fc3d9',rs:'#e0875a',toml:'#b0b0b0',yml:'#d27a7a',yaml:'#d27a7a',sh:'#6bcb77',py:'#5b9bd5',png:'#b57edc',svg:'#b57edc',jpg:'#b57edc'};
 const extColor=n=>EC[(n.split('.').pop()||'').toLowerCase()]||'var(--mu)';
 const PF=['feat','fix','docs','style','refactor','perf','test','chore','none'];
-let S={dirty:true,repos:[],cur:null,commits:[],up:new Set(),sel:null,pf:null,tab:0,mode:0,dir:''};
+let S={busy:false,dirty:true,repos:[],cur:null,commits:[],up:new Set(),sel:null,pf:null,tab:0,mode:0,dir:''};
 $('tr').checked=localStorage.tr!=='0';
 async function A(p,b){const r=await fetch('/api/'+p,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});const j=await r.json();if(!r.ok)throw new Error(j.error);return j}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',5000)}
@@ -100,11 +105,18 @@ $('pf').innerHTML=PF.map(p=>`<button data-p="${p}" onclick="setPf('${p}')">${p}<
 function setPf(p){S.pf=p;document.querySelectorAll('#pf button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));upd()}
 // Push mode: a repo is selected and there are no uncommitted changes
 const pushMode=()=>!!S.cur&&!S.dirty;
-function upd(){const p=pushMode();$('send').textContent=p?'プッシュ':'コミット';
-$('msg').placeholder=p?'未コミットの変更はありません (Ctrl+Enterでpush)':'コミットメッセージ (Ctrl+Enterでコミット)';
+function upd(){const p=pushMode();$('send').textContent=p?'プッシュ':'送信';
+$('msg').placeholder=p?'未コミットの変更はありません (Ctrl+Enterでpush)':'コミットメッセージ (Ctrl+Enterで送信: コミット→push)';
 $('comp').classList.toggle('pushmode',p);
-$('send').disabled=p?false:!(S.cur&&S.pf&&$('msg').value.trim())}
-function act(){if($('send').disabled)return;pushMode()?doPush():doCommit()}
+$('send').disabled=S.busy||(p?false:!(S.cur&&S.pf&&$('msg').value.trim()));
+// The commit-only dropdown is meaningless in push mode, so keep it disabled there
+$('sendm').disabled=S.busy||p||$('send').disabled;
+if($('sendm').disabled)$('sm').style.display='none'}
+// Default action: commit then push (or push only when nothing is left to commit)
+function act(){if($('send').disabled)return;pushMode()?doPush():doCommit(true)}
+// Dropdown action: commit only, without pushing
+function commitOnly(){$('sm').style.display='none';if($('sendm').disabled)return;doCommit(false)}
+function toggleSm(e){e.stopPropagation();if($('sendm').disabled)return;const m=$('sm');m.style.display=m.style.display==='block'?'none':'block'}
 // Re-check whether uncommitted files remain, independent of the active tab
 async function chk(){if(!S.cur)return;const st=await A('status?repo='+encodeURIComponent(S.cur));S.dirty=st.length>0;upd()}
 $('msg').oninput=upd;$('msg').onkeydown=e=>{if(e.key==='Enter'&&e.ctrlKey)act()};
@@ -120,7 +132,7 @@ function cMenu(e,h){e.preventDefault();const run=(a,msg)=>()=>{if(msg&&!confirm(
 menu(e,S.up.has(h)?[['reset --soft (変更を残す・ステージ維持)',run('soft')],['reset --mixed (変更を残す)',run('mixed')],['reset --hard (変更を破棄)',run('hard','このコミットまで戻し、以降の変更を破棄します。よろしいですか?'),'x']]:[['revert (打ち消しコミットを作成)',run('revert')]])}
 function toast2(m){const t=$('toast');t.style.background='var(--ok)';toast(m);setTimeout(()=>t.style.background='var(--err)',5200)}
 function menu(e,items){const m=$('menu');m.innerHTML='';items.forEach(([l,f,c])=>{const d=document.createElement('div');d.textContent=l;if(c)d.className=c;d.onclick=()=>{m.style.display='none';f()};m.append(d)});m.style.left=Math.min(e.clientX,innerWidth-210)+'px';m.style.top=Math.min(e.clientY,innerHeight-items.length*34-10)+'px';m.style.display='block'}
-document.addEventListener('click',()=>$('menu').style.display='none');
+document.addEventListener('click',()=>{$('menu').style.display='none';$('sm').style.display='none'});
 function tab(n){S.tab=n;tabs();drawRight()}function tabs(){$('t0').classList.toggle('on',S.tab===0);$('t1').classList.toggle('on',S.tab===1)}
 function closeDiff(){$('dwrap').style.display='none';$('diff').textContent=''}
 async function drawRight(){const L=$('list');closeDiff();if(!S.cur){L.innerHTML='';return}
@@ -138,8 +150,17 @@ async function stage(i,on){await T(async()=>{await A('stage',{repo:S.cur,paths:[
 function paint(t,n){$('dname').textContent=n;$('dwrap').style.display='flex';$('diff').scrollTop=0;$('diff').innerHTML=esc(t).split('\n').map(l=>`<div class="${l[0]==='+'&&!l.startsWith('+++')?'a':l[0]==='-'&&!l.startsWith('---')?'d':l.startsWith('@@')?'h':''}">${l||' '}</div>`).join('')}
 async function showDiff(i){const f=S._st[i];paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(f.path)}&staged=${f.staged&&f.y===' '?1:0}`),f.path)}
 async function fileDiff(p){S.file=p;document.querySelectorAll('#tree .f').forEach(e=>e.classList.toggle('on',e.dataset.p===p));paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`),p+(S.sel?'  @ '+S.sel.slice(0,8):''))}
-async function doCommit(){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m)){try{m=await A('translate',{text:m})}catch(e){if(!confirm('英訳に失敗しました: '+e.message+'\n原文のままコミットしますか?'))return}}
-if(S.pf!=='none')m=S.pf+': '+m;await A('commit',{repo:S.cur,message:m});$('msg').value='';S.pf=null;setPf(null);await refresh(true)})}
+// push=true: commit then push (default), push=false: commit only
+async function doCommit(push){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m)){try{m=await A('translate',{text:m})}catch(e){if(!confirm('英訳に失敗しました: '+e.message+'\n原文のままコミットしますか?'))return}}
+if(S.pf!=='none')m=S.pf+': '+m;
+// Pin the target repo so switching repos mid-push cannot push the wrong one
+const repo=S.cur;S.busy=true;upd();
+try{await A('commit',{repo,message:m});$('msg').value='';S.pf=null;setPf(null);
+if(push){await refresh(true);
+// The commit already succeeded here, so a push failure must not look like a failed commit
+try{await A('push',{repo});toast2('コミットしてpushしました')}catch(e){toast('コミットは完了しましたが、pushに失敗しました:\n'+e.message)}}
+}finally{S.busy=false;upd()}
+await refresh(true)})}
 function doPush(){if(!S.cur)return;T(async()=>{await A('push',{repo:S.cur});toast2('pushしました');refresh()})}
 // add dialog
 function openAdd(){$('modal').style.display='grid';mtab(0);browse('')}function closeM(){$('modal').style.display='none'}
