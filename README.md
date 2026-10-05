@@ -43,7 +43,7 @@ chmod +x Gitcord_*.AppImage
 3. 右の「変更」タブで、コミットしたいファイルにチェックを入れてステージします。ファイル名をクリックするとdiffが開きます。
 4. 下の入力欄にメッセージを書き、プレフィックス(または `none`)を選んで「送信」を押します。コミットに続けてpushまで自動で行われます。
 5. コミットだけしたい場合は、「送信」の隣の「▾」から「コミットのみ」を選びます。この場合pushはされません。
-6. 未コミットの変更がないときは、送信ボタンが「プッシュ」に変わり、未pushのコミットをpushできます(右上の「push」ボタンからも可能です)。
+6. コミットせずにpushだけしたい場合は、「送信」の隣の「▾」から「pushのみ」を選びます。
 
 メッセージは Ctrl+Enter でも送信できます(コミット→push)。pushに失敗した場合もコミット自体は完了しており、エラー内容がトーストで表示されます。
 
@@ -77,7 +77,7 @@ AppImageで解決しない場合は、お使いのディストリビューショ
 
 ## ソースからビルド
 
-必要なもの: Go 1.21以上、Rust(stable)、Node.js、[Tauriの依存ライブラリ](https://v2.tauri.app/start/prerequisites/#linux)
+必要なもの: Go 1.22以上、Rust(stable)、Node.js、[Tauriの依存ライブラリ](https://v2.tauri.app/start/prerequisites/#linux)
 
 ```
 TRIPLE=$(rustc -vV | sed -n 's/host: //p')
@@ -99,10 +99,21 @@ chmod +x gitcord
 ### 構成
 
 ```
-main.go          Goバックエンド(gitコマンドの実行とHTTP API)
-index.html       UI本体(1ファイル。Goバイナリに埋め込み)
+main.go          エントリポイント(フラグ解析、サーバー起動、UIの埋め込み)
+handlers.go      HTTP APIのルーティングとハンドラー
+git.go           gitコマンドの実行
+gitparse.go      gitの出力(log / status / name-status)のパーサー
+store.go         追加したディレクトリ一覧の保存(~/.config/gitcord/repos.json)
+translate.go     コミットメッセージの英訳(DeepL / MyMemory)
+*_test.go        Goのテスト(`go test ./...`)
+ui/              UI本体(Goバイナリに埋め込み)
+  index.html       マークアップ
+  style.css        スタイル
+  js/util.js       共通ヘルパー、アイコン、API呼び出し、トースト
+  js/diff.js       diffのパースと描画(統合表示 / 分割表示)
+  js/app.js        画面ロジック(履歴、変更、ファイル、コミット、追加ダイアログ)
 src-tauri/       Tauriのラッパー(Goバックエンドをsidecarとして起動し、ウィンドウで開く)
 web/             Tauriの設定上必要な起動中スプラッシュ
 ```
 
-UIを変更するなら `index.html`、Git操作やAPIを変更するなら `main.go` を編集します。
+UIを変更するなら `ui/`、Git操作やAPIを変更するなら `handlers.go` / `git.go` を編集します。

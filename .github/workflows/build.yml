@@ -36,6 +36,11 @@ jobs:
             src-tauri/tauri.conf.json > tmp.json
           mv tmp.json src-tauri/tauri.conf.json
 
+      - name: Vet and test Go
+        run: |
+          go vet ./...
+          go test ./...
+
       - name: Build Go sidecar
         run: |
           TRIPLE=$(rustc -vV | sed -n 's/host: //p')

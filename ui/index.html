@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gitcord</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="side" class="col">
+      <h3>Gitディレクトリ<button onclick="openAdd()" title="追加">＋</button></h3>
+      <div id="repos"></div>
+    </div>
+    <div id="mid" class="col">
+      <div id="head">Gitディレクトリを選択してください</div>
+      <div id="msgs"></div>
+      <div id="dwrap">
+        <div class="dh">
+          <span class="dn"><span id="dname"></span><span id="dstat"></span></span
+          ><span class="dbtn"
+            ><button id="dmode" onclick="toggleMode()"></button
+            ><button onclick="closeDiff()">閉じる</button></span
+          >
+        </div>
+        <pre id="diff"></pre>
+      </div>
+      <div id="comp">
+        <div class="box">
+          <textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterで送信)"></textarea>
+          <div class="row2">
+            <span class="split"
+              ><button class="pri" id="send" disabled onclick="act()">送信</button
+              ><button
+                class="pri"
+                id="sendm"
+                disabled
+                onclick="toggleSm(event)"
+                title="送信オプション"
+              >
+                &#9662;
+              </button>
+              <div id="sm">
+                <div id="smc" onclick="commitOnly()">commitのみ</div>
+                <div id="smp" onclick="pushOnly()">pushのみ</div>
+              </div></span
+            >
+            <span class="pf row2" id="pf"></span>
+            <label class="sw"
+              ><input
+                type="checkbox"
+                id="tr"
+                checked
+                onchange="localStorage.tr = this.checked ? 1 : 0"
+              />英訳</label
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="right" class="col">
+      <div class="tabs">
+        <span
+          ><button id="t0" class="on" onclick="tab(0)">変更</button
+          ><button id="t1" onclick="tab(1)">ファイル</button></span
+        >
+      </div>
+      <div id="list"></div>
+    </div>
+    <div id="menu"></div>
+    <div id="toast"></div>
+    <div id="modal">
+      <div class="p">
+        <div>
+          <button id="m0" onclick="mtab(0)">既存を追加</button>
+          <button id="m1" onclick="mtab(1)">cloneして追加</button>
+        </div>
+        <div id="clone" style="display: none">
+          <input id="curl" placeholder="リポジトリURL" /><br /><br /><input
+            id="cname"
+            placeholder="ディレクトリ名"
+          />
+        </div>
+        <input id="path" onchange="browse(this.value)" />
+        <div id="fb"></div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button onclick="closeM()">キャンセル</button
+          ><button class="pri" id="ok" onclick="confirmAdd()">追加</button>
+        </div>
+      </div>
+    </div>
+    <script src="js/util.js"></script>
+    <script src="js/diff.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
