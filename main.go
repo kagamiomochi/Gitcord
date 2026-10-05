@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 //go:embed index.html
@@ -277,6 +278,26 @@ func main() {
 			return []string{}, nil
 		}
 		return strings.Split(strings.TrimSpace(out), "\n"), nil
+	})
+	h("file", func(r *http.Request) (any, error) {
+		repo, rev, p := q(r, "repo"), q(r, "rev"), q(r, "path")
+		if rev == "" {
+			rev = "HEAD"
+		}
+		out, err := git(repo, "show", rev+":"+p)
+		if err != nil {
+			return nil, err
+		}
+		// Treat NUL bytes or invalid UTF-8 as binary content
+		if strings.ContainsRune(out, 0) || !utf8.ValidString(out) {
+			return "(バイナリファイルは表示できません)", nil
+		}
+		// Keep the UI responsive by capping the amount of text sent to it
+		const limit = 1 << 20
+		if len(out) > limit {
+			out = strings.ToValidUTF8(out[:limit], "") + "\n\n(1MBを超えるため、以降は省略されました)"
+		}
+		return out, nil
 	})
 	h("diff", func(r *http.Request) (any, error) {
 		repo, rev, p := q(r, "repo"), q(r, "rev"), q(r, "path")

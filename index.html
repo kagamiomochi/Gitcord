@@ -41,6 +41,7 @@ button.pri{background:var(--ac);color:#fff}
 #dwrap{display:none;flex:none;min-width:0;height:45%;flex-direction:column;border-top:1px solid var(--bg0);border-bottom:1px solid var(--bg0)}
 #dwrap .dh{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:var(--bg1);color:var(--mu);font-size:12px}
 #diff{flex:1;min-width:0;min-height:0;margin:0;overflow:auto;background:var(--bg0);padding:8px 16px;font:12px/1.4 ui-monospace,monospace;white-space:pre}
+#diff.file{counter-reset:ln}#diff.file>div::before{counter-increment:ln;content:counter(ln);display:inline-block;width:3.5em;margin-right:1em;text-align:right;color:var(--mu);user-select:none}
 #diff>div{min-width:max-content}#diff .a{color:#57d98a;background:rgba(35,165,89,.12)}#diff .d{color:#ff7b7e;background:rgba(242,63,67,.12)}#diff .h{color:#7aa2ff}
 .f{padding:2px 6px;border-radius:3px;cursor:pointer;display:flex;gap:6px;align-items:center;white-space:nowrap}
 .f:hover{background:var(--bg3)}.ic{width:15px;height:15px;flex:none}.chev{width:12px;height:12px;flex:none;transition:transform .12s}
@@ -137,19 +138,24 @@ function tab(n){S.tab=n;tabs();drawRight()}function tabs(){$('t0').classList.tog
 function closeDiff(){$('dwrap').style.display='none';$('diff').textContent=''}
 async function drawRight(){const L=$('list');closeDiff();if(!S.cur){L.innerHTML='';return}
 if(S.tab===0){const st=await A('status?repo='+encodeURIComponent(S.cur));
-L.innerHTML=st.length?st.map((f,i)=>{const c=f.y!==' '?f.y:f.x,l=c==='?'?'U':c,k=f.path.lastIndexOf('/'),nm=f.path.slice(k+1),dr=k>=0?f.path.slice(0,k):'';return `<div class="f cf"><input type="checkbox" ${f.staged?'checked':''} onchange="stage(${i},this.checked)"><span class="chip c${l}" title="${esc(f.x+f.y)}">${l}</span><span class="cl" onclick="showDiff(${i})"><span class="nm">${esc(nm)}</span><span class="dir">${esc(dr)}</span></span></div>`}).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
+L.innerHTML=st.length?st.map((f,i)=>{const c=f.y!==' '?f.y:f.x,l=c==='?'?'U':c,k=f.path.lastIndexOf('/'),nm=f.path.slice(k+1),dr=k>=0?f.path.slice(0,k):'';return `<div class="f cf" onclick="showDiff(${i})"><input type="checkbox" ${f.staged?'checked':''} onclick="event.stopPropagation()" onchange="stage(${i},this.checked)"><span class="chip c${l}" title="${esc(f.x+f.y)}">${l}</span><span class="cl"><span class="nm">${esc(nm)}</span><span class="dir">${esc(dr)}</span></span></div>`}).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
 else{S._paths=(await A('tree?repo='+encodeURIComponent(S.cur)+(S.sel?'&rev='+S.sel:''))).filter(Boolean);
 L.innerHTML=`<div class="tb"><input id="ff" placeholder="ファイルを絞り込み" value="${esc(S.q||'')}" oninput="S.q=this.value;drawTree()"><button onclick="fold(1)">展開</button><button onclick="fold(0)">折りたたみ</button></div><div class="rev"><span>${S.sel?S.sel.slice(0,8)+' 時点':'HEAD'}</span><span>${S._paths.length} ファイル</span></div><div id="tree"></div>`;drawTree()}}
 function fold(o){document.querySelectorAll('#tree details').forEach(d=>d.open=!!o)}
 function drawTree(){const q=(S.q||'').toLowerCase(),root={};
 (q?S._paths.filter(p=>p.toLowerCase().includes(q)):S._paths).forEach(p=>{let n=root;p.split('/').forEach((s,i,a)=>{n=n[s]??=(i===a.length-1?p:{})})});
 const cnt=n=>Object.values(n).reduce((a,v)=>a+(typeof v==='object'?cnt(v):1),0);
-const R=(n,d)=>Object.keys(n).sort((a,b)=>(typeof n[b]==='object')-(typeof n[a]==='object')||a.localeCompare(b)).map(k=>typeof n[k]==='object'?`<details ${d===0||q?'open':''}><summary>${ICO.chev}${ICO.dir}<span class="nm">${esc(k)}</span><span class="cn">${cnt(n[k])}</span></summary><div class="kids">${R(n[k],d+1)}</div></details>`:`<div class="f t ${S.file===n[k]?'on':''}" data-p="${esc(n[k])}" onclick="fileDiff(this.dataset.p)"><span class="sp"></span><span style="color:${extColor(k)};display:flex">${ICO.file}</span><span class="nm">${esc(k)}</span></div>`).join('');
+const R=(n,d)=>Object.keys(n).sort((a,b)=>(typeof n[b]==='object')-(typeof n[a]==='object')||a.localeCompare(b)).map(k=>typeof n[k]==='object'?`<details ${d===0||q?'open':''}><summary>${ICO.chev}${ICO.dir}<span class="nm">${esc(k)}</span><span class="cn">${cnt(n[k])}</span></summary><div class="kids">${R(n[k],d+1)}</div></details>`:`<div class="f t ${S.file===n[k]?'on':''}" data-p="${esc(n[k])}" onclick="openFile(this.dataset.p)"><span class="sp"></span><span style="color:${extColor(k)};display:flex">${ICO.file}</span><span class="nm">${esc(k)}</span></div>`).join('');
 $('tree').innerHTML=R(root,0)||'<div class="empty">'+(q?'一致するファイルがありません':'ファイルなし')+'</div>'}
 async function stage(i,on){await T(async()=>{await A('stage',{repo:S.cur,paths:[S._st[i].path],stage:on});drawRight()})}
-function paint(t,n){$('dname').textContent=n;$('dwrap').style.display='flex';$('diff').scrollTop=0;$('diff').innerHTML=esc(t).split('\n').map(l=>`<div class="${l[0]==='+'&&!l.startsWith('+++')?'a':l[0]==='-'&&!l.startsWith('---')?'d':l.startsWith('@@')?'h':''}">${l||' '}</div>`).join('')}
+function paint(t,n){$('diff').classList.remove('file');$('dname').textContent=n;$('dwrap').style.display='flex';$('diff').scrollTop=0;$('diff').innerHTML=esc(t).split('\n').map(l=>`<div class="${l[0]==='+'&&!l.startsWith('+++')?'a':l[0]==='-'&&!l.startsWith('---')?'d':l.startsWith('@@')?'h':''}">${l||' '}</div>`).join('')}
 async function showDiff(i){const f=S._st[i];paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(f.path)}&staged=${f.staged&&f.y===' '?1:0}`),f.path)}
-async function fileDiff(p){S.file=p;document.querySelectorAll('#tree .f').forEach(e=>e.classList.toggle('on',e.dataset.p===p));paint(await A(`diff?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`),p+(S.sel?'  @ '+S.sel.slice(0,8):''))}
+// Open a file from the file browser: show its content (at the selected commit, or HEAD) without diff coloring
+async function openFile(p){S.file=p;document.querySelectorAll('#tree .f').forEach(e=>e.classList.toggle('on',e.dataset.p===p));
+const t=await T(()=>A(`file?repo=${encodeURIComponent(S.cur)}&path=${encodeURIComponent(p)}&rev=${S.sel||'HEAD'}`));
+if(typeof t!=='string')return;
+$('diff').classList.add('file');$('dname').textContent=p+(S.sel?'  @ '+S.sel.slice(0,8):'');$('dwrap').style.display='flex';$('diff').scrollTop=0;
+$('diff').innerHTML=esc(t.replace(/\n$/,'')).split('\n').map(l=>`<div>${l||' '}</div>`).join('')}
 // push=true: commit then push (default), push=false: commit only
 async function doCommit(push){T(async()=>{let m=$('msg').value.trim();if($('tr').checked&&/[^\x00-\x7f]/.test(m)){try{m=await A('translate',{text:m})}catch(e){if(!confirm('英訳に失敗しました: '+e.message+'\n原文のままコミットしますか?'))return}}
 if(S.pf!=='none')m=S.pf+': '+m;
