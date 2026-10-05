@@ -78,7 +78,7 @@ details>summary .ic,#fb .ic{color:#7e9cd8}
 <div id="mid" class="col"><div id="head">Gitディレクトリを選択してください</div><div id="msgs"></div>
 <div id="dwrap"><div class="dh"><span id="dname"></span><button onclick="closeDiff()">閉じる</button></div><pre id="diff"></pre></div>
 <div id="comp"><div class="box">
-<textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterで送信: コミット→push)"></textarea>
+<textarea id="msg" placeholder="コミットメッセージ (Ctrl+Enterで送信)"></textarea>
 <div class="row2"><span class="split"><button class="pri" id="send" disabled onclick="act()">送信</button><button class="pri" id="sendm" disabled onclick="toggleSm(event)" title="送信オプション">&#9662;</button><div id="sm"><div onclick="commitOnly()">コミットのみ (pushしない)</div></div></span>
 <span class="pf row2" id="pf"></span>
 <label class="sw"><input type="checkbox" id="tr" checked onchange="localStorage.tr=this.checked?1:0">英訳</label></div></div></div></div>
@@ -107,7 +107,7 @@ function setPf(p){S.pf=p;document.querySelectorAll('#pf button').forEach(b=>b.cl
 // Push mode: a repo is selected and there are no uncommitted changes
 const pushMode=()=>!!S.cur&&!S.dirty;
 function upd(){const p=pushMode();$('send').textContent=p?'プッシュ':'送信';
-$('msg').placeholder=p?'未コミットの変更はありません (Ctrl+Enterでpush)':'コミットメッセージ (Ctrl+Enterで送信: コミット→push)';
+$('msg').placeholder=p?'未コミットの変更はありません (Ctrl+Enterでpush)':'コミットメッセージ (Ctrl+Enterで送信)';
 $('comp').classList.toggle('pushmode',p);
 $('send').disabled=S.busy||(p?false:!(S.cur&&S.pf&&$('msg').value.trim()));
 // The commit-only dropdown is meaningless in push mode, so keep it disabled there
@@ -122,11 +122,11 @@ function toggleSm(e){e.stopPropagation();if($('sendm').disabled)return;const m=$
 async function chk(){if(!S.cur)return;const st=await A('status?repo='+encodeURIComponent(S.cur));S.dirty=st.length>0;upd()}
 $('msg').oninput=upd;$('msg').onkeydown=e=>{if(e.key==='Enter'&&e.ctrlKey)act()};
 async function loadRepos(){S.repos=await A('repos');$('repos').innerHTML=S.repos.map(p=>`<div class="repo ${p===S.cur?'on':''}" data-p="${esc(p)}" oncontextmenu="repoMenu(event,this.dataset.p)" onclick="pick(this.dataset.p)"><div class="av">${esc(p.split('/').pop()[0]||'?').toUpperCase()}</div><div><b>${esc(p.split('/').pop())}</b><small>${esc(p)}</small></div></div>`).join('')||'<div class="empty">＋で追加</div>'}
-function repoMenu(e,p){e.preventDefault();menu(e,[['一覧から外す',()=>T(async()=>{await A('remove',{path:p});if(S.cur===p)S.cur=null;loadRepos()}),'x']])}
+function repoMenu(e,p){e.preventDefault();menu(e,[['一覧から削除',()=>T(async()=>{await A('remove',{path:p});if(S.cur===p)S.cur=null;loadRepos()}),'x']])}
 async function pick(p){S.cur=p;S.sel=null;$('head').textContent=p.split('/').pop();loadRepos();await refresh(true);}
 async function refresh(bottom){if(!S.cur)return;const l=await A('log?repo='+encodeURIComponent(S.cur));S.commits=l.commits.reverse();S.up=new Set(l.unpushed);await chk();drawLog(bottom);drawRight()}
 function drawLog(bottom){const m=$('msgs');const keep=m.scrollHeight-m.scrollTop;
-m.innerHTML=(S.commits.length?'<div class="first">first commit はここから</div>':'<div class="empty">コミットはまだありません</div>')+S.commits.map(c=>`<div class="c ${S.up.has(c.Hash)?'up':''} ${S.sel===c.Hash?'sel':''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av">${esc(c.Author[0]||'?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time*1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash)?'<span class="tag">未プッシュ</span>':''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0,8)}</code></div></div>`).join('');
+m.innerHTML=(S.commits.length?'<div class="first">first commit</div>':'<div class="empty">コミットはまだありません</div>')+S.commits.map(c=>`<div class="c ${S.up.has(c.Hash)?'up':''} ${S.sel===c.Hash?'sel':''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av">${esc(c.Author[0]||'?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time*1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash)?'<span class="tag">未プッシュ</span>':''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0,8)}</code></div></div>`).join('');
 m.scrollTop=bottom?m.scrollHeight:m.scrollHeight-keep}
 function selC(h){S.sel=S.sel===h?null:h;if(S.sel)S.tab=1;drawLog();tabs();drawRight()}
 function cMenu(e,h){e.preventDefault();const run=(a,msg)=>()=>{if(msg&&!confirm(msg))return;T(async()=>{await A('action',{repo:S.cur,hash:h,action:a});await refresh();toast2('完了')})};
@@ -140,7 +140,7 @@ async function drawRight(){const L=$('list');closeDiff();if(!S.cur){L.innerHTML=
 if(S.tab===0){const st=await A('status?repo='+encodeURIComponent(S.cur));
 L.innerHTML=st.length?st.map((f,i)=>{const c=f.y!==' '?f.y:f.x,l=c==='?'?'U':c,k=f.path.lastIndexOf('/'),nm=f.path.slice(k+1),dr=k>=0?f.path.slice(0,k):'';return `<div class="f cf" onclick="showDiff(${i})"><input type="checkbox" ${f.staged?'checked':''} onclick="event.stopPropagation()" onchange="stage(${i},this.checked)"><span class="chip c${l}" title="${esc(f.x+f.y)}">${l}</span><span class="cl"><span class="nm">${esc(nm)}</span><span class="dir">${esc(dr)}</span></span></div>`}).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
 else{S._paths=(await A('tree?repo='+encodeURIComponent(S.cur)+(S.sel?'&rev='+S.sel:''))).filter(Boolean);
-L.innerHTML=`<div class="tb"><input id="ff" placeholder="ファイルを絞り込み" value="${esc(S.q||'')}" oninput="S.q=this.value;drawTree()"><button onclick="fold(1)">展開</button><button onclick="fold(0)">折りたたみ</button></div><div class="rev"><span>${S.sel?S.sel.slice(0,8)+' 時点':'HEAD'}</span><span>${S._paths.length} ファイル</span></div><div id="tree"></div>`;drawTree()}}
+L.innerHTML=`<div class="tb"><input id="ff" placeholder="ファイルを絞り込み" value="${esc(S.q||'')}" oninput="S.q=this.value;drawTree()"><button onclick="fold(1)">展開</button><button onclick="fold(0)">折りたたみ</button></div><div class="rev"><span>${S.sel?S.sel.slice(0,8)+'':'HEAD'}</span><span>${S._paths.length} ファイル</span></div><div id="tree"></div>`;drawTree()}}
 function fold(o){document.querySelectorAll('#tree details').forEach(d=>d.open=!!o)}
 function drawTree(){const q=(S.q||'').toLowerCase(),root={};
 (q?S._paths.filter(p=>p.toLowerCase().includes(q)):S._paths).forEach(p=>{let n=root;p.split('/').forEach((s,i,a)=>{n=n[s]??=(i===a.length-1?p:{})})});
