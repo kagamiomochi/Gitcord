@@ -48,7 +48,7 @@ button.pri{background:var(--ac);color:#fff}
 #list .tb{display:flex;gap:4px;position:sticky;top:-8px;background:var(--bg1);padding:8px 0 6px;z-index:1}
 #list .tb input{flex:1;min-width:0;background:var(--bg0);border:0;border-radius:4px;padding:5px 8px;color:var(--tx);font:inherit;font-size:12px;outline:0}
 #list .tb button{font-size:11px;padding:4px 7px;color:var(--mu)}
-.rev{display:flex;justify-content:space-between;color:var(--mu);font-size:12px;padding:2px 6px 6px}
+.rev{display:flex;justify-content:space-between;gap:8px;color:var(--mu);font-size:12px;padding:2px 6px 6px}.rev .nm,.rev>span:last-child{white-space:nowrap}.rev button{font-size:11px;padding:3px 8px}
 details>summary{list-style:none;display:flex;gap:6px;align-items:center;padding:3px 6px;border-radius:3px;cursor:pointer;white-space:nowrap}
 details>summary::-webkit-details-marker{display:none}
 details>summary:hover{background:var(--bg3)}
@@ -61,7 +61,7 @@ details>summary .ic,#fb .ic{color:#7e9cd8}
 .cf .cl{display:flex;gap:8px;align-items:baseline;min-width:0;flex:1}.cf .nm{font-weight:600}
 .cf .dir{color:var(--mu);font-size:12px;overflow:hidden;text-overflow:ellipsis}
 .chip{width:18px;height:18px;border-radius:3px;display:grid;place-items:center;font:700 11px monospace;flex:none;background:var(--bg3);color:var(--mu)}
-.cM{color:var(--warn)}.cA,.cU{color:var(--ok)}.cD{color:var(--err)}.cR{color:#7aa2ff}
+.cM{color:var(--warn)}.cA,.cU{color:var(--ok)}.cD{color:var(--err)}.cR,.cC,.cT{color:#7aa2ff}
 .st{font:11px monospace;color:var(--warn)}
 #menu{position:fixed;background:var(--bg0);border-radius:6px;padding:4px;display:none;z-index:9;min-width:190px}
 #menu div{padding:6px 10px;border-radius:4px;cursor:pointer}#menu div:hover{background:var(--ac)}
@@ -128,7 +128,7 @@ async function refresh(bottom){if(!S.cur)return;const l=await A('log?repo='+enco
 function drawLog(bottom){const m=$('msgs');const keep=m.scrollHeight-m.scrollTop;
 m.innerHTML=(S.commits.length?'<div class="first">first commit</div>':'<div class="empty">コミットはまだありません</div>')+S.commits.map(c=>`<div class="c ${S.up.has(c.Hash)?'up':''} ${S.sel===c.Hash?'sel':''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av">${esc(c.Author[0]||'?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time*1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash)?'<span class="tag">未プッシュ</span>':''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0,8)}</code></div></div>`).join('');
 m.scrollTop=bottom?m.scrollHeight:m.scrollHeight-keep}
-function selC(h){S.sel=S.sel===h?null:h;if(S.sel)S.tab=1;drawLog();tabs();drawRight()}
+function selC(h){S.sel=S.sel===h?null:h;if(S.sel)S.tab=0;drawLog();tabs();drawRight()}
 function cMenu(e,h){e.preventDefault();const run=(a,msg)=>()=>{if(msg&&!confirm(msg))return;T(async()=>{await A('action',{repo:S.cur,hash:h,action:a});await refresh();toast2('完了')})};
 menu(e,S.up.has(h)?[['reset --soft (変更を残す・ステージ維持)',run('soft')],['reset --mixed (変更を残す)',run('mixed')],['reset --hard (変更を破棄)',run('hard','このコミットまで戻し、以降の変更を破棄します。よろしいですか?'),'x']]:[['revert (打ち消しコミットを作成)',run('revert')]])}
 function toast2(m){const t=$('toast');t.style.background='var(--ok)';toast(m);setTimeout(()=>t.style.background='var(--err)',5200)}
@@ -137,10 +137,23 @@ document.addEventListener('click',()=>{$('menu').style.display='none';$('sm').st
 function tab(n){S.tab=n;tabs();drawRight()}function tabs(){$('t0').classList.toggle('on',S.tab===0);$('t1').classList.toggle('on',S.tab===1)}
 function closeDiff(){$('dwrap').style.display='none';$('diff').textContent=''}
 async function drawRight(){const L=$('list');closeDiff();if(!S.cur){L.innerHTML='';return}
+if(S.tab===0&&S.sel){await drawCommitChanges();return}
 if(S.tab===0){const st=await A('status?repo='+encodeURIComponent(S.cur));
 L.innerHTML=st.length?st.map((f,i)=>{const c=f.y!==' '?f.y:f.x,l=c==='?'?'U':c,k=f.path.lastIndexOf('/'),nm=f.path.slice(k+1),dr=k>=0?f.path.slice(0,k):'';return `<div class="f cf" onclick="showDiff(${i})"><input type="checkbox" ${f.staged?'checked':''} onclick="event.stopPropagation()" onchange="stage(${i},this.checked)"><span class="chip c${l}" title="${esc(f.x+f.y)}">${l}</span><span class="cl"><span class="nm">${esc(nm)}</span><span class="dir">${esc(dr)}</span></span></div>`}).join(''):'<div class="empty">未コミットの変更はありません</div>';S._st=st}
 else{S._paths=(await A('tree?repo='+encodeURIComponent(S.cur)+(S.sel?'&rev='+S.sel:''))).filter(Boolean);
 L.innerHTML=`<div class="tb"><input id="ff" placeholder="ファイルを絞り込み" value="${esc(S.q||'')}" oninput="S.q=this.value;drawTree()"><button onclick="fold(1)">展開</button><button onclick="fold(0)">折りたたみ</button></div><div class="rev"><span>${S.sel?S.sel.slice(0,8)+'':'HEAD'}</span><span>${S._paths.length} ファイル</span></div><div id="tree"></div>`;drawTree()}}
+// Changes tab for a selected past commit: list the files it touched; clicking one shows that commit's diff
+async function drawCommitChanges(){const L=$('list'),h=S.sel,repo=S.cur;
+const cs=await T(()=>A(`changes?repo=${encodeURIComponent(repo)}&rev=${h}`));
+// Ignore the response if the selection or tab changed while it was loading
+if(!Array.isArray(cs)||S.sel!==h||S.cur!==repo||S.tab!==0)return;
+S._cs=cs;const c=S.commits.find(x=>x.Hash===h);
+L.innerHTML=`<div class="rev"><span class="nm">${h.slice(0,8)} ${esc(c?c.Subject:'')}</span><span>${cs.length} ファイル</span></div><div class="rev"><button onclick="selC(S.sel)">未コミットの変更に戻る</button></div>`+
+(cs.length?cs.map((f,i)=>{const k=f.path.lastIndexOf('/'),nm=f.path.slice(k+1),dr=k>=0?f.path.slice(0,k):'';
+return `<div class="f cf" title="${esc(f.old?f.old+' → '+f.path:f.path)}" onclick="showCDiff(${i})"><span class="chip c${esc(f.status)}">${esc(f.status)}</span><span class="cl"><span class="nm">${esc(nm)}</span><span class="dir">${esc(dr)}</span></span></div>`}).join(''):'<div class="empty">このコミットで変更されたファイルはありません</div>')}
+async function showCDiff(i){const f=S._cs[i],h=S.sel;
+const t=await T(()=>A(`diff?repo=${encodeURIComponent(S.cur)}&rev=${h}&path=${encodeURIComponent(f.path)}`+(f.old?`&old=${encodeURIComponent(f.old)}`:'')));
+if(typeof t!=='string')return;paint(t,f.path+'  @ '+h.slice(0,8))}
 function fold(o){document.querySelectorAll('#tree details').forEach(d=>d.open=!!o)}
 function drawTree(){const q=(S.q||'').toLowerCase(),root={};
 (q?S._paths.filter(p=>p.toLowerCase().includes(q)):S._paths).forEach(p=>{let n=root;p.split('/').forEach((s,i,a)=>{n=n[s]??=(i===a.length-1?p:{})})});
@@ -176,6 +189,6 @@ $('fb').innerHTML=`<div class="f" data-p="${esc(r.parent)}" onclick="browse(this
 $('ok').dataset.git=r.git?1:''})}
 $('curl').oninput=()=>{if(!$('cname').dataset.u)$('cname').value=$('curl').value.replace(/\/+$/,'').split(/[\/:]/).pop().replace(/\.git$/,'')};$('cname').oninput=()=>$('cname').dataset.u=1;
 function confirmAdd(){T(async()=>{if(S.mode){await A('clone',{url:$('curl').value.trim(),dir:S.dir,name:$('cname').value.trim()})}else await A('add',{path:S.dir});closeM();await loadRepos()})}
-window.addEventListener('focus',()=>{if(S.cur)T(async()=>{await chk();if(S.tab===0)drawRight()})});
+window.addEventListener('focus',()=>{if(S.cur)T(async()=>{await chk();if(S.tab===0&&!S.sel)drawRight()})});
 loadRepos();
 </script></body></html>

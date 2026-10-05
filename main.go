@@ -303,7 +303,14 @@ func main() {
 		repo, rev, p := q(r, "repo"), q(r, "rev"), q(r, "path")
 		var out string
 		if rev != "" {
-			out, _ = git(repo, "show", "--format=", rev, "--", p)
+			// Include the old path so renames are shown as renames, not as a whole-file add
+			paths := []string{p}
+			if o := q(r, "old"); o != "" && o != p {
+				paths = append(paths, o)
+			}
+			// -m --first-parent makes merge commits show a diff against their first parent
+			args := append([]string{"show", "--format=", "-m", "--first-parent", "-M", rev, "--"}, paths...)
+			out, _ = git(repo, args...)
 			if strings.TrimSpace(out) == "" {
 				out, _ = git(repo, "show", rev+":"+p)
 				out = "(このコミットでは変更なし。ファイル内容)\n" + out
@@ -317,6 +324,42 @@ func main() {
 			}
 		}
 		return out, nil
+	})
+	h("changes", func(r *http.Request) (any, error) {
+		repo, rev := q(r, "repo"), q(r, "rev")
+		type F struct {
+			Path   string `json:"path"`
+			Old    string `json:"old"`
+			Status string `json:"status"`
+		}
+		res := []F{}
+		// diff-tree prints nothing useful for merges without -m, so diff against the first parent instead
+		var out string
+		var err error
+		if ps, _ := git(repo, "rev-list", "--parents", "-n", "1", rev); len(strings.Fields(ps)) > 2 {
+			out, err = git(repo, "diff", "--name-status", "-M", "-z", rev+"^1", rev)
+		} else {
+			out, err = git(repo, "diff-tree", "--no-commit-id", "--name-status", "-r", "-M", "-z", "--root", rev)
+		}
+		if err != nil {
+			return nil, err
+		}
+		parts := strings.Split(out, "\x00")
+		for i := 0; i < len(parts); i++ {
+			st := parts[i]
+			if st == "" || i+1 >= len(parts) {
+				continue
+			}
+			f := F{Status: st[:1], Path: parts[i+1]}
+			i++
+			// Renames and copies carry a second path (the new one)
+			if (st[0] == 'R' || st[0] == 'C') && i+1 < len(parts) {
+				f.Old, f.Path = f.Path, parts[i+1]
+				i++
+			}
+			res = append(res, f)
+		}
+		return res, nil
 	})
 	h("status", func(r *http.Request) (any, error) {
 		out, err := git(q(r, "repo"), "status", "--porcelain=v1", "-uall", "-z")
