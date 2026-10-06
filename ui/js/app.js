@@ -50,7 +50,7 @@ async function loadRepos() {
     S.repos
       .map(
         p =>
-          `<div class="repo ${p === S.cur ? 'on' : ''}" data-p="${esc(p)}" oncontextmenu="repoMenu(event,this.dataset.p)" onclick="pick(this.dataset.p)"><div class="av">${esc(p.split('/').pop()[0] || '?').toUpperCase()}</div><div><b>${esc(p.split('/').pop())}</b><small>${esc(p)}</small></div></div>`,
+          `<div class="repo ${p === S.cur ? 'on' : ''}" data-p="${esc(p)}" oncontextmenu="repoMenu(event,this.dataset.p)" onclick="pick(this.dataset.p)"><div class="av" style="${hue(p.split('/').pop())}">${esc(p.split('/').pop()[0] || '?').toUpperCase()}</div><div><b>${esc(p.split('/').pop())}</b><small>${esc(p)}</small></div></div>`,
       )
       .join('') || '<div class="empty">＋で追加</div>';
 }
@@ -73,6 +73,7 @@ async function pick(p) {
   S.cur = p;
   S.sel = null;
   $('head').textContent = p.split('/').pop();
+  $('head').classList.add('on');
   loadRepos();
   await refresh(true);
 }
@@ -95,7 +96,7 @@ function drawLog(bottom) {
     S.commits
       .map(
         c =>
-          `<div class="c ${S.up.has(c.Hash) ? 'up' : ''} ${S.sel === c.Hash ? 'sel' : ''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av">${esc(c.Author[0] || '?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time * 1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash) ? '<span class="tag">未プッシュ</span>' : ''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0, 8)}</code></div></div>`,
+          `<div class="c ${S.up.has(c.Hash) ? 'up' : ''} ${S.sel === c.Hash ? 'sel' : ''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av" style="${hue(c.Author)}">${esc(c.Author[0] || '?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time * 1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash) ? '<span class="tag">未プッシュ</span>' : ''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0, 8)}</code></div></div>`,
       )
       .join('');
   m.scrollTop = bottom ? m.scrollHeight : m.scrollHeight - keep;

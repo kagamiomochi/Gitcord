@@ -669,3 +669,319 @@ details > summary .ic,
   padding: 30px;
   text-align: center;
 }
+
+/* ===== Visual polish layer: tokens, motion, and component refinements ===== */
+:root {
+  --bg0: #17181b;
+  --bg1: #1f2024;
+  --bg2: #26272c;
+  --bg3: #2f3137;
+  --tx: #e3e5e8;
+  --mu: #8e949d;
+  --ac: #5865f2;
+  --line: rgba(255, 255, 255, 0.06);
+  --sh: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3c43 transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a3c43;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+button {
+  border-radius: 6px;
+  transition:
+    background 0.15s,
+    transform 0.05s,
+    filter 0.15s;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+button:focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 2px;
+}
+button.pri:hover:not(:disabled) {
+  background: #6b77ff;
+  filter: none;
+}
+
+/* Column headers share one height so the borders line up */
+#side h3,
+#right .tabs,
+#head {
+  height: 48px;
+  padding: 0 14px;
+  box-shadow: 0 1px 0 var(--line);
+  border-bottom: 0;
+}
+#side h3 {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--mu);
+}
+#side h3 button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+}
+#side h3 button:hover {
+  background: var(--bg3);
+  filter: none;
+}
+#head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#head.on::before {
+  content: '#';
+  color: var(--mu);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+/* Repo list: colored avatars, active indicator bar */
+.repo {
+  position: relative;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.repo.on::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #fff;
+}
+.repo b {
+  font-weight: 600;
+}
+.av {
+  transition: border-radius 0.15s;
+  color: #fff;
+}
+.repo:hover .av,
+.repo.on .av {
+  border-radius: 10px;
+}
+
+/* Commit log */
+.c {
+  gap: 14px;
+  padding: 8px 16px 8px 13px;
+  transition: background 0.12s;
+}
+.c .m div {
+  margin: 2px 0 4px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.c b {
+  color: #fff;
+}
+.c code {
+  background: var(--bg0);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.c.sel {
+  background: rgba(88, 101, 242, 0.14);
+  border-left-color: var(--ac);
+}
+.tag {
+  background: rgba(240, 178, 50, 0.16);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.first {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.first::before,
+.first::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Composer */
+#comp .box {
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+#comp .box:focus-within {
+  border-color: rgba(88, 101, 242, 0.65);
+  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.16);
+}
+#comp textarea {
+  height: 52px;
+  line-height: 1.5;
+}
+.pf button {
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 12px;
+  background: var(--bg0);
+  color: var(--mu);
+}
+.pf button:hover {
+  color: var(--tx);
+  filter: none;
+}
+.pf button.on {
+  background: var(--ac);
+  color: #fff;
+}
+.split #send {
+  border-radius: 6px 0 0 6px;
+}
+.split #sendm {
+  border-radius: 0 6px 6px 0;
+}
+#sm,
+#menu {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--sh);
+  animation: pop 0.12s ease-out;
+}
+.sw input {
+  appearance: none;
+  width: 30px;
+  height: 18px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--bg0);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sw input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--mu);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.sw input:checked {
+  background: var(--ac);
+}
+.sw input:checked::after {
+  transform: translateX(12px);
+  background: #fff;
+}
+
+/* Right pane: tabs and file rows */
+.tabs span {
+  display: flex;
+  gap: 4px;
+  height: 100%;
+}
+.tabs button {
+  padding: 0 12px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+}
+.tabs button.on {
+  border-bottom-color: var(--ac);
+}
+.f {
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.cf .nm {
+  font-weight: 500;
+}
+.chip {
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+input[type='checkbox'] {
+  accent-color: var(--ac);
+}
+#list .tb input:focus,
+#modal input:focus {
+  box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.55);
+}
+.rev {
+  padding: 4px 8px 8px;
+}
+
+/* Diff viewer */
+#diff {
+  background: #14151a;
+}
+#dwrap .dh {
+  box-shadow: 0 1px 0 var(--line);
+}
+#dwrap {
+  border-top: 0;
+}
+
+/* Modal and toast */
+#modal {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+#modal .p {
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--sh);
+  border: 1px solid var(--line);
+  animation: pop 0.15s ease-out;
+}
+#fb {
+  border: 1px solid var(--line);
+}
+#toast {
+  border-radius: 8px;
+  box-shadow: var(--sh);
+  animation: pop 0.2s ease-out;
+}
+.empty {
+  padding: 40px 20px;
+}

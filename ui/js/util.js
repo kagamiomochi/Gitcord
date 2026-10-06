@@ -85,3 +85,10 @@ function fileRow({ path, title, onclick, lead }) {
   const t = title ? ` title="${esc(title)}"` : '';
   return `<div class="f cf"${t} onclick="${onclick}">${lead}<span class="cl"><span class="nm">${esc(name)}</span><span class="dir">${esc(dir)}</span></span></div>`;
 }
+
+// Stable avatar background derived from a string (same name always gets the same color)
+const hue = s => {
+  let h = 0;
+  for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return `background:hsl(${h} 50% 42%)`;
+};
