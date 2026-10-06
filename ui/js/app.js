@@ -1,4 +1,4 @@
-$('pf').innerHTML = PF.map(p => `<button data-p="${p}" onclick="setPf('${p}')">${p}</button>`).join(
+$('pf').innerHTML = PF.map(p => `<button data-p="${p}" style="--pc:${PFC[p]}" onclick="setPf('${p}')">${p}</button>`).join(
   '',
 );
 // ---- Composer: prefix buttons and send controls ----
@@ -95,8 +95,9 @@ function drawLog(bottom) {
       : '<div class="empty">コミットはまだありません</div>') +
     S.commits
       .map(
-        c =>
-          `<div class="c ${S.up.has(c.Hash) ? 'up' : ''} ${S.sel === c.Hash ? 'sel' : ''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av" style="${hue(c.Author)}">${esc(c.Author[0] || '?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time * 1000).toLocaleString('ja-JP')}</time>${S.up.has(c.Hash) ? '<span class="tag">未プッシュ</span>' : ''}<div>${esc(c.Subject)}</div><code>${c.Hash.slice(0, 8)}</code></div></div>`,
+        (c, i) =>
+          dayDiv(c, S.commits[i - 1]) +
+          `<div class="c ${S.up.has(c.Hash) ? 'up' : ''} ${S.sel === c.Hash ? 'sel' : ''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av" style="${hue(c.Author)}">${esc(c.Author[0] || '?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</time>${S.up.has(c.Hash) ? '<span class="tag">未プッシュ</span>' : ''}<div>${subj(c.Subject)}</div><code>${c.Hash.slice(0, 8)}</code></div></div>`,
       )
       .join('');
   m.scrollTop = bottom ? m.scrollHeight : m.scrollHeight - keep;
@@ -178,7 +179,8 @@ async function drawRight() {
   if (S.tab === 0) {
     const st = await A('status?repo=' + encodeURIComponent(S.cur));
     L.innerHTML = st.length
-      ? st
+      ? stageBar(st) +
+        st
           .map((f, i) => {
             const c = f.y !== ' ' ? f.y : f.x;
             const l = c === '?' ? 'U' : c;
@@ -260,6 +262,18 @@ function drawTree() {
   $('tree').innerHTML =
     R(root, 0) ||
     '<div class="empty">' + (q ? '一致するファイルがありません' : 'ファイルなし') + '</div>';
+}
+// Toolbar above the changed-file list: stage or unstage every file at once
+function stageBar(st) {
+  const n = st.filter(f => f.staged).length;
+  const all = n === st.length;
+  return `<div class="rev"><span>${n} / ${st.length} ステージ済み</span><button onclick="stageAll(${!all})">${all ? 'すべて解除' : 'すべてステージ'}</button></div>`;
+}
+async function stageAll(on) {
+  await T(async () => {
+    await A('stage', { repo: S.cur, paths: S._st.map(f => f.path), stage: on });
+    drawRight();
+  });
 }
 async function stage(i, on) {
   await T(async () => {

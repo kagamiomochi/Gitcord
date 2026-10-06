@@ -92,3 +92,35 @@ const hue = s => {
   for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360;
   return `background:hsl(${h} 50% 42%)`;
 };
+
+// Color per commit-message prefix (used for prefix buttons and the badge in the log)
+const PFC = {
+  feat: '#23a559',
+  fix: '#f23f43',
+  docs: '#3b9cff',
+  style: '#c77dff',
+  refactor: '#f0b232',
+  perf: '#ff8a3d',
+  test: '#2ec4b6',
+  chore: '#8e949d',
+  none: '#6b7078',
+};
+const PFRE = new RegExp(`^(${Object.keys(PFC).filter(k => k !== 'none').join('|')})(\\([^)]*\\))?!?:\\s*([\\s\\S]*)$`);
+// Render a commit subject with its prefix as a colored badge
+function subj(t) {
+  const m = PFRE.exec(t);
+  if (!m) return esc(t);
+  return `<span class="pfx" style="--pc:${PFC[m[1]]}">${m[1]}${esc(m[2] || '')}</span>${esc(m[3])}`;
+}
+// Date divider shown when a commit falls on a different local day than the previous one
+function dayDiv(c, prev) {
+  const d = new Date(c.Time * 1000);
+  if (prev && new Date(prev.Time * 1000).toDateString() === d.toDateString()) return '';
+  const label = d.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  });
+  return `<div class="dd"><span>${label}</span></div>`;
+}
