@@ -1014,3 +1014,74 @@ input[type='checkbox'] {
   background: rgba(255, 255, 255, 0.06);
   background: color-mix(in srgb, var(--pc) 16%, transparent);
 }
+
+/* Sending feedback: spinner, status text, indeterminate progress bar */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes slide {
+  from {
+    left: -35%;
+  }
+  to {
+    left: 100%;
+  }
+}
+button.spin::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+button.spin:disabled {
+  opacity: 0.85;
+  cursor: progress;
+}
+#comp .box {
+  position: relative;
+}
+#comp .bar {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+#comp.busy .bar {
+  opacity: 1;
+}
+#comp .bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  background: var(--ac);
+  border-radius: 2px;
+  animation: slide 1.1s ease-in-out infinite;
+}
+#stat {
+  flex: 1;
+  text-align: right;
+  color: var(--mu);
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  button.spin::before,
+  #comp .bar::after {
+    animation-duration: 2.4s;
+  }
+}

@@ -313,26 +313,29 @@ async function openFile(p) {
 // push=true: commit then push (default), push=false: commit only
 async function doCommit(push) {
   T(async () => {
-    let m = $('msg').value.trim();
-    if ($('tr').checked && /[^\x00-\x7f]/.test(m)) {
-      try {
-        m = await A('translate', { text: m });
-      } catch (e) {
-        if (!confirm('英訳に失敗しました: ' + e.message + '\n原文のままコミットしますか?')) return;
-      }
-    }
-    if (S.pf !== 'none') m = S.pf + ': ' + m;
     // Pin the target repo so switching repos mid-push cannot push the wrong one
     const repo = S.cur;
     S.busy = true;
-    upd();
+    stat('準備中');
     try {
+      let m = $('msg').value.trim();
+      if ($('tr').checked && /[^\x00-\x7f]/.test(m)) {
+        stat('英訳中');
+        try {
+          m = await A('translate', { text: m });
+        } catch (e) {
+          if (!confirm('英訳に失敗しました: ' + e.message + '\n原文のままコミットしますか?')) return;
+        }
+      }
+      if (S.pf !== 'none') m = S.pf + ': ' + m;
+      stat('コミット中');
       await A('commit', { repo, message: m });
       $('msg').value = '';
       S.pf = null;
       setPf(null);
       if (push) {
         await refresh(true);
+        stat('pushしています');
         // The commit already succeeded here, so a push failure must not look like a failed commit
         try {
           await A('push', { repo });
@@ -343,7 +346,7 @@ async function doCommit(push) {
       }
     } finally {
       S.busy = false;
-      upd();
+      stat('');
     }
     await refresh(true);
   });
@@ -351,10 +354,24 @@ async function doCommit(push) {
 function doPush() {
   if (!S.cur) return;
   T(async () => {
-    await A('push', { repo: S.cur });
-    toast('pushしました', true);
+    S.busy = true;
+    stat('pushしています');
+    try {
+      await A('push', { repo: S.cur });
+      toast('pushしました', true);
+    } finally {
+      S.busy = false;
+      stat('');
+    }
     refresh();
   });
+}
+// Progress feedback while sending: spinner on the send button, status text, and a progress bar ('' clears it)
+function stat(t) {
+  $('comp').classList.toggle('busy', !!t);
+  $('send').classList.toggle('spin', !!t);
+  $('stat').textContent = t;
+  upd();
 }
 // ---- Add-repository dialog ----
 // add dialog
@@ -400,9 +417,17 @@ $('curl').oninput = () => {
 $('cname').oninput = () => ($('cname').dataset.u = 1);
 function confirmAdd() {
   T(async () => {
-    if (S.mode) {
-      await A('clone', { url: $('curl').value.trim(), dir: S.dir, name: $('cname').value.trim() });
-    } else await A('add', { path: S.dir });
+    const ok = $('ok');
+    ok.disabled = true;
+    ok.classList.add('spin');
+    try {
+      if (S.mode) {
+        await A('clone', { url: $('curl').value.trim(), dir: S.dir, name: $('cname').value.trim() });
+      } else await A('add', { path: S.dir });
+    } finally {
+      ok.disabled = false;
+      ok.classList.remove('spin');
+    }
     closeM();
     await loadRepos();
   });
