@@ -1,7 +1,12 @@
-$('pf').innerHTML = PF.map(p => `<button data-p="${p}" style="--pc:${PFC[p]}" onclick="setPf('${p}')">${p}</button>`).join(
-  '',
-);
 // ---- Composer: prefix buttons and send controls ----
+// Rebuild the prefix buttons from the current settings, keeping the selected one highlighted
+function renderPf() {
+  $('pf').innerHTML = PF.map(
+    p =>
+      `<button data-p="${esc(p)}" style="--pc:${esc(PFC[p])}" onclick="setPf(this.dataset.p)">${esc(p)}</button>`,
+  ).join('');
+  document.querySelectorAll('#pf button').forEach(b => b.classList.toggle('on', b.dataset.p === S.pf));
+}
 function setPf(p) {
   S.pf = p;
   document.querySelectorAll('#pf button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
@@ -40,9 +45,22 @@ function toggleSm(e) {
   m.style.display = m.style.display === 'block' ? 'none' : 'block';
 }
 $('msg').oninput = upd;
+// Does this Enter keydown match the configured send key?
+function isSendKey(e) {
+  const mod = e.ctrlKey || e.metaKey;
+  if (CFG.sendKey === 'enter') return !mod && !e.shiftKey && !e.altKey;
+  if (CFG.sendKey === 'shift') return e.shiftKey && !mod && !e.altKey;
+  return mod && !e.shiftKey && !e.altKey;
+}
 $('msg').onkeydown = e => {
-  if (e.key === 'Enter' && e.ctrlKey) act();
+  // Ignore the Enter that confirms an IME conversion (keyCode 229 covers older WebViews)
+  if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229 || !isSendKey(e)) return;
+  e.preventDefault();
+  // Explain why nothing happens instead of silently swallowing the key
+  if (S.cur && !S.busy && $('msg').value.trim() && !S.pf) toast('プレフィックスを選んでください');
+  act();
 };
+applyCfg();
 // ---- Repository list and commit log ----
 async function loadRepos() {
   S.repos = await A('repos');

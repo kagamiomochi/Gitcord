@@ -31,7 +31,6 @@ const EC = {
   jpg: '#b57edc',
 };
 const extColor = n => EC[(n.split('.').pop() || '').toLowerCase()] || 'var(--mu)';
-const PF = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'chore', 'none'];
 let S = {
   busy: false,
   repos: [],
@@ -93,19 +92,70 @@ const hue = s => {
   return `background:hsl(${h} 50% 42%)`;
 };
 
-// Color per commit-message prefix (used for prefix buttons and the badge in the log)
-const PFC = {
-  feat: '#23a559',
-  fix: '#f23f43',
-  docs: '#3b9cff',
-  style: '#c77dff',
-  refactor: '#f0b232',
-  perf: '#ff8a3d',
-  test: '#2ec4b6',
-  chore: '#8e949d',
-  none: '#6b7078',
+// ---- User settings (persisted in localStorage) ----
+// Default commit prefixes; 'none' is built in and always appended last
+const DEF_PF = [
+  { name: 'feat', color: '#23a559' },
+  { name: 'fix', color: '#f23f43' },
+  { name: 'docs', color: '#3b9cff' },
+  { name: 'style', color: '#c77dff' },
+  { name: 'refactor', color: '#f0b232' },
+  { name: 'perf', color: '#ff8a3d' },
+  { name: 'test', color: '#2ec4b6' },
+  { name: 'chore', color: '#8e949d' },
+];
+const NONE_COLOR = '#6b7078';
+// Send-key modes and the placeholder hint shown for each
+const SEND_HINT = {
+  ctrl: 'Ctrl+Enterで送信',
+  shift: 'Shift+Enterで送信',
+  enter: 'Enterで送信 / Shift+Enterで改行',
 };
-const PFRE = new RegExp(`^(${Object.keys(PFC).filter(k => k !== 'none').join('|')})(\\([^)]*\\))?!?:\\s*([\\s\\S]*)$`);
+// A prefix name must be usable in "name: message" and parsable back from it
+const PF_NAME_RE = /^[^\s:()!]+$/;
+const validPf = p =>
+  p &&
+  typeof p.name === 'string' &&
+  PF_NAME_RE.test(p.name) &&
+  p.name !== 'none' &&
+  /^#[0-9a-f]{6}$/i.test(p.color);
+function loadCfg() {
+  let c = {};
+  try {
+    c = JSON.parse(localStorage.gcCfg || '{}') || {};
+  } catch {
+    c = {};
+  }
+  const seen = new Set();
+  const prefixes = Array.isArray(c.prefixes)
+    ? c.prefixes
+        .filter(p => validPf(p) && !seen.has(p.name) && seen.add(p.name))
+        .map(p => ({ name: p.name, color: p.color }))
+    : DEF_PF.map(p => ({ ...p }));
+  return { sendKey: c.sendKey in SEND_HINT ? c.sendKey : 'ctrl', prefixes };
+}
+function saveCfg() {
+  try {
+    localStorage.gcCfg = JSON.stringify(CFG);
+  } catch {
+    toast('設定を保存できませんでした');
+  }
+}
+let CFG = loadCfg();
+// Derived tables: PF (button order), PFC (color per prefix), PFRE (parses a commit subject)
+let PF, PFC, PFRE;
+function rebuildPf() {
+  const names = CFG.prefixes.map(p => p.name);
+  PF = [...names, 'none'];
+  PFC = Object.fromEntries(CFG.prefixes.map(p => [p.name, p.color]));
+  PFC.none = NONE_COLOR;
+  const alt = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  // With no custom prefixes the pattern must never match (an empty group would match everything)
+  PFRE = alt
+    ? new RegExp(`^(${alt})(\\([^)]*\\))?!?:\\s*([\\s\\S]*)$`)
+    : /(?!)/;
+}
+rebuildPf();
 // Render a commit subject with its prefix as a colored badge
 function subj(t) {
   const m = PFRE.exec(t);

@@ -605,7 +605,8 @@ details > summary .ic,
 #menu .x {
   color: var(--err);
 }
-#modal {
+#modal,
+#smodal {
   position: fixed;
   inset: 0;
   background: #0009;
@@ -613,7 +614,8 @@ details > summary .ic,
   place-items: center;
   z-index: 8;
 }
-#modal .p {
+#modal .p,
+#smodal .p {
   background: var(--bg2);
   border-radius: 8px;
   width: 560px;
@@ -1139,4 +1141,87 @@ body.dv {
   content: '';
   display: block;
   height: calc(var(--comp-h, 120px) + 24px);
+}
+
+/* Settings button in the sidebar footer */
+#sfoot {
+  padding: 8px;
+  border-top: 1px solid var(--bg0);
+}
+#sfoot button {
+  width: 100%;
+  background: var(--bg3);
+  color: var(--tx);
+}
+/* Settings dialog */
+#smodal .p {
+  overflow: auto;
+}
+#smodal h3 {
+  margin: 0;
+}
+#smodal h4 {
+  margin: 0 0 6px;
+  color: var(--mu);
+  font-size: 12px;
+}
+#smodal section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#smodal .opt {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+#smodal .pr {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+#smodal .pr .pn {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg0);
+  border: 0;
+  color: var(--tx);
+  border-radius: 4px;
+  padding: 6px 7px;
+  font: inherit;
+}
+#smodal .pr.fixed {
+  color: var(--mu);
+}
+#smodal .pr.fixed .pn {
+  background: none;
+  padding-left: 0;
+}
+#smodal .pr .sq {
+  width: 28px;
+  height: 22px;
+  border-radius: 4px;
+}
+#smodal input[type='color'] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+#smodal input[type='radio'] {
+  width: auto;
+}
+#smodal button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+#smodal button.x {
+  color: var(--err);
+}
+#smodal .acts {
+  display: flex;
+  justify-content: flex-end;
 }
