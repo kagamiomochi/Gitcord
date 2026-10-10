@@ -439,4 +439,16 @@ window.addEventListener('focus', () => {
       if (S.tab === 0 && !S.sel) drawRight();
     });
 });
+// Keep --comp-h in sync with the overlaid composer height so the last
+// commit is never hidden behind it; stay pinned to the bottom if we were there
+(function trackComposerHeight() {
+  const comp = $('comp');
+  const mid = $('mid');
+  const msgs = $('msgs');
+  new ResizeObserver(() => {
+    const atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 4;
+    mid.style.setProperty('--comp-h', comp.offsetHeight + 'px');
+    if (atBottom) msgs.scrollTop = msgs.scrollHeight;
+  }).observe(comp);
+})();
 loadRepos();

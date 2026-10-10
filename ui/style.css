@@ -1085,3 +1085,50 @@ button.spin:disabled {
     animation-duration: 2.4s;
   }
 }
+
+/* Composer overlay: history runs to the bottom edge, composer floats above it */
+#mid {
+  position: relative;
+}
+#comp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  /* let clicks pass through the empty area around the box */
+  pointer-events: none;
+}
+#comp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* soft fade so the history does not clash with the composer */
+  background: linear-gradient(to bottom, rgba(49, 51, 56, 0), rgba(49, 51, 56, 0.85) 55%);
+}
+#comp .box {
+  pointer-events: auto;
+  background: rgba(56, 58, 64, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+#comp .box:focus-within {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(88, 101, 242, 0.16);
+}
+/* --comp-h is kept in sync with the composer height by app.js */
+#msgs {
+  padding-bottom: calc(var(--comp-h, 120px) + 8px);
+}
+/* Spacer instead of padding: #diff.dff sets its own padding with higher specificity */
+#diff.dff {
+  padding-bottom: 0;
+}
+#diff::after {
+  content: '';
+  display: block;
+  height: calc(var(--comp-h, 120px) + 24px);
+}
