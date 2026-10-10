@@ -1105,7 +1105,15 @@ button.spin:disabled {
   inset: 0;
   z-index: -1;
   /* soft fade so the history does not clash with the composer */
-  background: linear-gradient(to bottom, rgba(49, 51, 56, 0), rgba(49, 51, 56, 0.85) 55%);
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--fade-rgb, 49, 51, 56), 0),
+    rgba(var(--fade-rgb, 49, 51, 56), 0.85) 55%
+  );
+}
+/* Diff and file viewer use a darker background, so fade into that color instead */
+body.dv {
+  --fade-rgb: 20, 21, 26;
 }
 #comp .box {
   pointer-events: auto;
