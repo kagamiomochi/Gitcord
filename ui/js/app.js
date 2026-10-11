@@ -5,7 +5,9 @@ function renderPf() {
     p =>
       `<button data-p="${esc(p)}" style="--pc:${esc(PFC[p])}" onclick="setPf(this.dataset.p)">${esc(p)}</button>`,
   ).join('');
-  document.querySelectorAll('#pf button').forEach(b => b.classList.toggle('on', b.dataset.p === S.pf));
+  document
+    .querySelectorAll('#pf button')
+    .forEach(b => b.classList.toggle('on', b.dataset.p === S.pf));
 }
 function setPf(p) {
   S.pf = p;
@@ -38,6 +40,30 @@ function pushOnly() {
   if (!S.cur || S.busy) return;
   doPush();
 }
+// Dropdown action: overwrite the remote history after a rewrite (refuses if someone else pushed meanwhile)
+function forcePush() {
+  $('sm').style.display = 'none';
+  if (!S.cur || S.busy) return;
+  if (!confirm('force push (--force-with-lease) でリモートの履歴を上書きします。よろしいですか?'))
+    return;
+  T(async () => {
+    S.busy = true;
+    stat('force pushしています');
+    try {
+      await A('push', { repo: S.cur, force: true });
+      toast('force pushしました', true);
+    } finally {
+      S.busy = false;
+      stat('');
+    }
+    refresh();
+  });
+}
+// Explain how to continue when a plain push was rejected, which is what happens after a rewrite
+const pushErr = m =>
+  /rejected|non-fast-forward|fetch first/.test(m)
+    ? m + '\n\n履歴を書き換えた場合は、送信ボタン横の「▾」から force push できます'
+    : m;
 function toggleSm(e) {
   e.stopPropagation();
   if ($('sendm').disabled) return;
@@ -90,7 +116,7 @@ function repoMenu(e, p) {
 async function pick(p) {
   S.cur = p;
   S.sel = null;
-  $('head').textContent = p.split('/').pop();
+  $('ht').textContent = p.split('/').pop();
   $('head').classList.add('on');
   loadRepos();
   await refresh(true);
@@ -127,36 +153,95 @@ function selC(h) {
   tabs();
   drawRight();
 }
+// Warning appended to confirmations when an action rewrites already pushed commits
+const PUSHED_WARN =
+  'このコミットはpush済みです。履歴を書き換えると、反映にforce pushが必要になります。\n他の環境で取得済みの場合は履歴が食い違います。';
+// Actions after which commit hashes change, so a selected commit may no longer exist
+const REWRITES = new Set(['soft', 'mixed', 'hard', 'reword', 'drop', 'fixup', 'restore']);
 function cMenu(e, h) {
   e.preventDefault();
+  const i = S.commits.findIndex(c => c.Hash === h);
+  if (i < 0) return;
+  const pushed = !S.up.has(h);
+  // The log is capped, so only a short history is known to start at the real first commit
+  const isRoot = i === 0 && S.commits.length < 5000;
+  const isHead = i === S.commits.length - 1;
+  const ask = (msg, rewrites) => (rewrites && pushed ? msg + '\n\n' + PUSHED_WARN : msg);
+  // Run a history action; msg (optional) asks for confirmation first
   const run = (a, msg) => () => {
     if (msg && !confirm(msg)) return;
     T(async () => {
       await A('action', { repo: S.cur, hash: h, action: a });
+      if (REWRITES.has(a)) S.sel = null;
       await refresh();
       toast('完了', true);
     });
   };
-  menu(
-    e,
-    S.up.has(h)
-      ? [
-          ['reset --soft (変更を残す・ステージ維持)', run('soft')],
-          ['reset --mixed (変更を残す)', run('mixed')],
-          [
-            'reset --hard (変更を破棄)',
-            run('hard', 'このコミットまで戻し、以降の変更を破棄します。よろしいですか?'),
-            'x',
-          ],
-        ]
-      : [['revert (打ち消しコミットを作成)', run('revert')]],
+  const items = [
+    ['ハッシュをコピー', () => copyText(h)],
+    [
+      'メッセージをコピー',
+      () => T(async () => copyText(await A(`message?repo=${encodeURIComponent(S.cur)}&rev=${h}`))),
+    ],
+    null,
+    ['メッセージを編集', () => editMsg(h, pushed)],
+  ];
+  if (!isRoot) {
+    items.push(
+      [
+        '1つ前のコミットにまとめる (fixup)',
+        run(
+          'fixup',
+          ask(
+            'このコミットを1つ前のコミットにまとめます。メッセージは前のコミットのものが残ります。',
+            true,
+          ),
+        ),
+      ],
+      [
+        '履歴から削除 (drop)',
+        run(
+          'drop',
+          ask('このコミットを履歴から削除し、以降のコミットを付け替えます。よろしいですか?', true),
+        ),
+        'x',
+      ],
+    );
+  }
+  items.push(
+    null,
+    ['打ち消しコミットを作成 (revert)', run('revert')],
+    ['打ち消しをステージだけする (revert --no-commit)', run('revert-n')],
   );
+  if (!isHead) {
+    items.push(
+      null,
+      [
+        'reset --soft (変更を残す・ステージ維持)',
+        run('soft', ask('このコミットまで戻します。', true)),
+      ],
+      ['reset --mixed (変更を残す)', run('mixed', ask('このコミットまで戻します。', true))],
+      [
+        'reset --hard (変更を破棄)',
+        run('hard', ask('このコミットまで戻し、以降の変更を破棄します。よろしいですか?', true)),
+        'x',
+      ],
+    );
+  }
+  menu(e, items);
 }
+// Items are [label, handler, className]; null draws a separator
 function menu(e, items) {
   const m = $('menu');
   m.innerHTML = '';
-  items.forEach(([l, f, c]) => {
+  items.forEach(it => {
     const d = document.createElement('div');
+    if (!it) {
+      d.className = 'sep';
+      m.append(d);
+      return;
+    }
+    const [l, f, c] = it;
     d.textContent = l;
     if (c) d.className = c;
     d.onclick = () => {
@@ -165,9 +250,103 @@ function menu(e, items) {
     };
     m.append(d);
   });
-  m.style.left = Math.min(e.clientX, innerWidth - 210) + 'px';
-  m.style.top = Math.min(e.clientY, innerHeight - items.length * 34 - 10) + 'px';
   m.style.display = 'block';
+  // Measure after showing so the menu never runs off the bottom of the window
+  m.style.left = Math.max(0, Math.min(e.clientX, innerWidth - m.offsetWidth - 10)) + 'px';
+  m.style.top = Math.max(0, Math.min(e.clientY, innerHeight - m.offsetHeight - 10)) + 'px';
+}
+async function copyText(t) {
+  try {
+    await navigator.clipboard.writeText(t);
+  } catch {
+    // Fallback for WebViews without the async clipboard API
+    const a = document.createElement('textarea');
+    a.value = t;
+    document.body.append(a);
+    a.select();
+    document.execCommand('copy');
+    a.remove();
+  }
+  toast('コピーしました', true);
+}
+// ---- Edit a commit message ----
+async function editMsg(h, pushed) {
+  const m = await T(() => A(`message?repo=${encodeURIComponent(S.cur)}&rev=${h}`));
+  if (typeof m !== 'string') return;
+  S.edit = { h, pushed };
+  $('emsg').value = m;
+  $('ehint').textContent = pushed
+    ? 'push済みのコミットです。保存すると履歴が書き換わり、反映にはforce pushが必要になります。'
+    : '';
+  $('emodal').style.display = 'grid';
+  $('emsg').focus();
+}
+function closeEdit() {
+  $('emodal').style.display = 'none';
+  S.edit = null;
+}
+function saveEdit() {
+  const ed = S.edit,
+    message = $('emsg').value.trim();
+  if (!ed) return;
+  if (!message) return toast('メッセージを入力してください');
+  T(async () => {
+    $('eok').disabled = true;
+    try {
+      await A('action', { repo: S.cur, hash: ed.h, action: 'reword', message });
+    } finally {
+      $('eok').disabled = false;
+    }
+    closeEdit();
+    S.sel = null;
+    await refresh();
+    toast('完了', true);
+  });
+}
+$('emsg').onkeydown = e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) saveEdit();
+  if (e.key === 'Escape') closeEdit();
+};
+// ---- Operation history (reflog): undo a mistaken rewrite ----
+async function openReflog() {
+  if (!S.cur) return;
+  const repo = S.cur;
+  const es = await T(() => A('reflog?repo=' + encodeURIComponent(repo)));
+  if (!Array.isArray(es) || S.cur !== repo) return;
+  // Intermediate steps of a rebase are not meaningful places to return to
+  const keep = es.filter(
+    (x, i) => i === 0 || !/^rebase \(/.test(x.message) || /^rebase \(finish\)/.test(x.message),
+  );
+  $('rlist').innerHTML =
+    keep
+      .map((x, i) => {
+        const t = new Date(x.time * 1000).toLocaleString('ja-JP', {
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        return `<div class="re"><time>${t}</time><span class="rm" title="${esc(x.message)}">${esc(x.message)}</span><code>${x.hash.slice(0, 8)}</code>${
+          i === 0
+            ? '<span class="cur">現在</span>'
+            : `<button data-h="${x.hash}" onclick="restoreTo(this.dataset.h)">戻す</button>`
+        }</div>`;
+      })
+      .join('') || '<div class="empty">履歴がありません</div>';
+  $('rmodal').style.display = 'grid';
+}
+function closeReflog() {
+  $('rmodal').style.display = 'none';
+}
+function restoreTo(h) {
+  const repo = S.cur;
+  T(async () => {
+    await A('action', { repo, hash: h, action: 'restore' });
+    closeReflog();
+    S.sel = null;
+    await refresh();
+    toast('元に戻しました', true);
+  });
 }
 document.addEventListener('click', () => {
   $('menu').style.display = 'none';
@@ -342,7 +521,8 @@ async function doCommit(push) {
         try {
           m = await A('translate', { text: m });
         } catch (e) {
-          if (!confirm('英訳に失敗しました: ' + e.message + '\n原文のままコミットしますか?')) return;
+          if (!confirm('英訳に失敗しました: ' + e.message + '\n原文のままコミットしますか?'))
+            return;
         }
       }
       if (S.pf !== 'none') m = S.pf + ': ' + m;
@@ -359,7 +539,7 @@ async function doCommit(push) {
           await A('push', { repo });
           toast('送信しました', true);
         } catch (e) {
-          toast('コミットは完了しましたが、pushに失敗しました:\n' + e.message);
+          toast('コミットは完了しましたが、pushに失敗しました:\n' + pushErr(e.message));
         }
       }
     } finally {
@@ -375,7 +555,11 @@ function doPush() {
     S.busy = true;
     stat('pushしています');
     try {
-      await A('push', { repo: S.cur });
+      try {
+        await A('push', { repo: S.cur });
+      } catch (e) {
+        throw new Error(pushErr(e.message));
+      }
       toast('pushしました', true);
     } finally {
       S.busy = false;
@@ -440,7 +624,11 @@ function confirmAdd() {
     ok.classList.add('spin');
     try {
       if (S.mode) {
-        await A('clone', { url: $('curl').value.trim(), dir: S.dir, name: $('cname').value.trim() });
+        await A('clone', {
+          url: $('curl').value.trim(),
+          dir: S.dir,
+          name: $('cname').value.trim(),
+        });
       } else await A('add', { path: S.dir });
     } finally {
       ok.disabled = false;

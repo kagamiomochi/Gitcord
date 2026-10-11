@@ -13,7 +13,10 @@
       <div id="sfoot"><button onclick="openSettings()">設定</button></div>
     </div>
     <div id="mid" class="col">
-      <div id="head">Gitディレクトリを選択してください</div>
+      <div id="head">
+        <span id="ht">Gitディレクトリを選択してください</span
+        ><button id="rl" onclick="openReflog()" title="HEADの移動履歴から元に戻す">操作履歴</button>
+      </div>
       <div id="msgs"></div>
       <div id="dwrap">
         <div class="dh">
@@ -44,6 +47,7 @@
               <div id="sm">
                 <div id="smc" onclick="commitOnly()">commitのみ</div>
                 <div id="smp" onclick="pushOnly()">pushのみ</div>
+                <div id="smf" onclick="forcePush()">force push (--force-with-lease)</div>
               </div></span
             >
             <span class="pf row2" id="pf"></span>
@@ -97,12 +101,20 @@
         <section>
           <h4>コミットメッセージの送信キー</h4>
           <label class="opt"
-            ><input type="radio" name="sk" value="ctrl" onchange="setSendKey(this.value)" />Ctrl+Enter
-            で送信 (Enterは改行)</label
+            ><input
+              type="radio"
+              name="sk"
+              value="ctrl"
+              onchange="setSendKey(this.value)"
+            />Ctrl+Enter で送信 (Enterは改行)</label
           >
           <label class="opt"
-            ><input type="radio" name="sk" value="shift" onchange="setSendKey(this.value)" />Shift+Enter
-            で送信 (Enterは改行)</label
+            ><input
+              type="radio"
+              name="sk"
+              value="shift"
+              onchange="setSendKey(this.value)"
+            />Shift+Enter で送信 (Enterは改行)</label
           >
           <label class="opt"
             ><input type="radio" name="sk" value="enter" onchange="setSendKey(this.value)" />Enter
@@ -120,6 +132,27 @@
           <div class="pr"><button onclick="resetPf()">初期設定に戻す</button></div>
         </section>
         <div class="acts"><button class="pri" onclick="closeSettings()">閉じる</button></div>
+      </div>
+    </div>
+    <div id="emodal">
+      <div class="p">
+        <h3>コミットメッセージを編集</h3>
+        <div class="mu" id="ehint"></div>
+        <textarea id="emsg"></textarea>
+        <div class="acts">
+          <button onclick="closeEdit()">キャンセル</button>
+          <button class="pri" id="eok" onclick="saveEdit()">保存</button>
+        </div>
+      </div>
+    </div>
+    <div id="rmodal">
+      <div class="p">
+        <h3>操作履歴</h3>
+        <div class="mu">
+          HEADが動いた履歴です。選んだ時点に戻せます(未コミットの変更は保持されます)。
+        </div>
+        <div id="rlist"></div>
+        <div class="acts"><button class="pri" onclick="closeReflog()">閉じる</button></div>
       </div>
     </div>
     <script src="js/util.js"></script>

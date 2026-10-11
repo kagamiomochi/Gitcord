@@ -12,6 +12,11 @@ import (
 // stdout is returned even on failure, because some commands such as
 // `diff --no-index` exit non-zero while still producing useful output.
 func git(repo string, args ...string) (string, error) {
+	return gitEnv(repo, nil, args...)
+}
+
+// gitEnv is git with extra environment variables (KEY=VALUE) for the child process.
+func gitEnv(repo string, extra []string, args ...string) (string, error) {
 	if repo != "" {
 		args = append([]string{"-C", repo}, args...)
 	}
@@ -25,7 +30,7 @@ func git(repo string, args ...string) (string, error) {
 		}
 		env = append(env, e)
 	}
-	c.Env = append(env, "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8")
+	c.Env = append(append(env, "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8"), extra...)
 
 	// Keep stdout and stderr separate so warnings never end up in parsed output
 	var stdout, stderr bytes.Buffer

@@ -15,6 +15,13 @@ import (
 var uiAssets embed.FS
 
 func main() {
+	// git re-invokes this binary as its todo/message editor during history rewrites
+	if ok, err := runEditor(os.Args[1:]); ok {
+		if err != nil {
+			fatal(err)
+		}
+		return
+	}
 	addr := flag.String("addr", "127.0.0.1:8484", "listen address")
 	noOpen := flag.Bool("no-open", false, "do not open the browser")
 	flag.Parse()

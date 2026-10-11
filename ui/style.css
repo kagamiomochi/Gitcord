@@ -1011,7 +1011,9 @@ input[type='checkbox'] {
   margin-right: 8px;
   padding: 0 7px;
   border-radius: 4px;
-  font: 600 12px/1.6 ui-monospace, monospace;
+  font:
+    600 12px/1.6 ui-monospace,
+    monospace;
   color: var(--pc);
   background: rgba(255, 255, 255, 0.06);
   background: color-mix(in srgb, var(--pc) 16%, transparent);
@@ -1224,4 +1226,123 @@ body.dv {
 #smodal .acts {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Header action: reflog */
+#head #ht {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#rl {
+  display: none;
+  background: var(--bg3);
+  color: var(--tx);
+  font-size: 12px;
+  padding: 5px 10px;
+}
+#head.on #rl {
+  display: block;
+}
+
+/* Menu separator */
+#menu .sep,
+#menu .sep:hover {
+  height: 1px;
+  padding: 0;
+  margin: 4px 2px;
+  background: var(--line);
+  cursor: default;
+}
+
+/* Edit-message and reflog dialogs share the settings dialog look */
+#emodal,
+#rmodal {
+  position: fixed;
+  inset: 0;
+  background: #0009;
+  display: none;
+  place-items: center;
+  z-index: 8;
+}
+#emodal .p,
+#rmodal .p {
+  background: var(--bg2);
+  border-radius: 8px;
+  width: 560px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 10px;
+}
+#emodal h3,
+#rmodal h3 {
+  margin: 0;
+}
+#emodal .mu,
+#rmodal .mu {
+  color: var(--mu);
+  font-size: 12px;
+}
+#emodal .mu:empty {
+  display: none;
+}
+#emsg {
+  min-height: 140px;
+  resize: vertical;
+  background: var(--bg0);
+  border: 0;
+  color: var(--tx);
+  border-radius: 4px;
+  padding: 8px;
+  font: inherit;
+}
+#emodal .acts,
+#rmodal .acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#rlist {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#rlist .re {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+#rlist .re:hover {
+  background: var(--bg3);
+}
+#rlist .re .rm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#rlist .re time,
+#rlist .re code {
+  color: var(--mu);
+  font-size: 12px;
+}
+#rlist .re .cur {
+  color: var(--mu);
+  font-size: 12px;
+  width: 64px;
+  text-align: center;
+}
+#rlist .re button {
+  width: 64px;
+  padding: 4px 0;
+  font-size: 12px;
 }

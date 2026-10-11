@@ -55,6 +55,8 @@ func (s *server) routes() http.Handler {
 	api("commit", s.handleCommit)
 	api("push", s.handlePush)
 	api("action", s.handleAction)
+	api("reflog", s.handleReflog)
+	api("message", s.handleMessage)
 	api("translate", s.handleTranslate)
 
 	mux.Handle("/", http.FileServerFS(s.ui))
@@ -284,16 +286,31 @@ func (s *server) handleCommit(r *http.Request) (any, error) {
 }
 
 func (s *server) handlePush(r *http.Request) (any, error) {
-	in, err := decode[struct{ Repo string }](r)
+	in, err := decode[struct {
+		Repo  string
+		Force bool
+	}](r)
 	if err != nil {
 		return nil, err
+	}
+	if in.Force {
+		// --force-with-lease refuses to overwrite commits that were pushed by someone else
+		return git(in.Repo, "push", "--force-with-lease")
 	}
 	return git(in.Repo, "push")
 }
 
-// handleAction rewrites history: reset (soft/mixed/hard) or revert.
+// handleAction rewrites history. Hash is the target commit (for restore, a reflog entry).
+//
+//	soft | mixed | hard  reset the branch to Hash
+//	revert               add a commit that undoes Hash
+//	revert-n             apply the undo of Hash to the working tree without committing
+//	reword               change the message of Hash (Message)
+//	drop                 remove Hash from the history
+//	fixup                fold Hash into the commit before it, keeping that commit's message
+//	restore              move HEAD back to Hash, keeping uncommitted changes
 func (s *server) handleAction(r *http.Request) (any, error) {
-	in, err := decode[struct{ Repo, Hash, Action string }](r)
+	in, err := decode[struct{ Repo, Hash, Action, Message string }](r)
 	if err != nil {
 		return nil, err
 	}
@@ -303,10 +320,52 @@ func (s *server) handleAction(r *http.Request) (any, error) {
 	switch in.Action {
 	case "soft", "mixed", "hard":
 		return git(in.Repo, "reset", "--"+in.Action, in.Hash)
-	case "revert":
-		return git(in.Repo, "revert", "--no-edit", in.Hash)
+	case "revert", "revert-n":
+		return revertCommit(in.Repo, in.Hash, in.Action == "revert-n")
+	case "reword":
+		if strings.TrimSpace(in.Message) == "" {
+			return nil, errors.New("メッセージが空です")
+		}
+		hash, err := resolveCommit(in.Repo, in.Hash)
+		if err != nil {
+			return nil, err
+		}
+		if head, _ := git(in.Repo, "rev-parse", "HEAD"); strings.TrimSpace(head) == hash {
+			// --only keeps already staged changes out of the amended commit
+			return git(in.Repo, "commit", "--amend", "--only", "-m", strings.TrimSpace(in.Message))
+		}
+		return rebaseEdit(in.Repo, in.Hash, "reword", in.Message)
+	case "drop", "fixup":
+		return rebaseEdit(in.Repo, in.Hash, in.Action, "")
+	case "restore":
+		if _, err := resolveCommit(in.Repo, in.Hash); err != nil {
+			return nil, err
+		}
+		return git(in.Repo, "reset", "--keep", in.Hash)
 	}
 	return nil, errors.New("unknown action")
+}
+
+// handleMessage returns the full message (subject and body) of a commit.
+func (s *server) handleMessage(r *http.Request) (any, error) {
+	rev, err := revParam(r, true)
+	if err != nil {
+		return nil, err
+	}
+	out, err := git(query(r, "repo"), "log", "-1", "--format=%B", rev)
+	if err != nil {
+		return nil, err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// handleReflog lists where HEAD has been, newest first, so a mistaken rewrite can be undone.
+func (s *server) handleReflog(r *http.Request) (any, error) {
+	out, err := git(query(r, "repo"), "reflog", "-n", "50", reflogFormat)
+	if err != nil {
+		return []reflogEntry{}, nil
+	}
+	return parseReflog(out), nil
 }
 
 func (s *server) handleTranslate(r *http.Request) (any, error) {
