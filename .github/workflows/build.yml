@@ -13,7 +13,7 @@ jobs:
   linux:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install system dependencies
         run: |
@@ -21,10 +21,13 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
             libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.22" }
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.22"
+          # No external dependencies, so there is no go.sum to cache
+          cache: false
+      - uses: actions/setup-node@v6
+        with: { node-version: 22 }
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: src-tauri }
@@ -52,7 +55,7 @@ jobs:
           npm install
           npx tauri build
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: gitcord-linux
           path: |
@@ -66,7 +69,7 @@ jobs:
 
       - name: Publish release
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # Every push to main becomes a numbered build release
           tag_name: build-${{ github.run_number }}
