@@ -60,9 +60,12 @@ chmod +x Gitcord_*.AppImage
 
 ## 注意事項
 
-- **英訳機能とプライバシー**: コミットメッセージの文面を翻訳サービス(既定は MyMemory、環境変数 `GITCORD_DEEPL_KEY` を設定した場合は DeepL API Free)に送信します。機密性の高い内容を扱う場合は、英訳をOFFにしてください。OFFにすると、ネットワークには何も送りません。
-  - `GITCORD_DEEPL_KEY`: DeepL API Free のキー。設定すると DeepL を優先して使います。
-  - `GITCORD_MYMEMORY_EMAIL`: MyMemory の連絡用メールアドレス。設定すると無料枠が 5,000 文字/日から 50,000 文字/日に増えます。
+- **英訳機能とプライバシー**: コミットメッセージの文面を翻訳サービス(MyMemory または DeepL)に送信します。機密性の高い内容を扱う場合は、英訳をOFFにしてください。OFFにすると、ネットワークには何も送りません。
+  - 翻訳エンジンは左下の「設定」の「英訳」で選べます。「自動」(既定)は DeepL のAPIキーがあれば DeepL、なければ MyMemory を使います。
+  - DeepL APIキー: 設定画面に入力します。末尾が `:fx` のキーは無料版、それ以外は有料版のエンドポイントに接続します。「接続テスト」でキーの動作を確認できます。
+  - MyMemory 連絡用メールアドレス: 設定画面に入力すると、無料枠が 5,000 文字/日から 50,000 文字/日に増えます。
+  - 設定画面が未入力の項目は、環境変数 `GITCORD_DEEPL_KEY` / `GITCORD_MYMEMORY_EMAIL` が使われます。
+  - 設定画面の値はブラウザ(WebView)のlocalStorageに平文で保存されます。共有PCではご注意ください。
   - 英訳に失敗した場合は、原文のままコミットするか確認ダイアログが表示されます。
 - **データの保存場所**: 追加したディレクトリの一覧は `~/.config/gitcord/repos.json` に保存されます。
 - **ローカル通信のみ**: 内部のサーバーは `127.0.0.1` でのみ待ち受け、外部からは接続できません。
@@ -104,7 +107,6 @@ Tauriなしでバックエンドだけを動かして、ブラウザで試すこ
 
 ```
 go build -o gitcord .
-chmod +x gitcord
 ./gitcord
 ```
 
@@ -117,7 +119,7 @@ history.go       履歴の書き換え(reword / drop / fixup / revert)とreflog�
 git.go           gitコマンドの実行
 gitparse.go      gitの出力(log / status / name-status)のパーサー
 store.go         追加したディレクトリ一覧の保存(~/.config/gitcord/repos.json)
-translate.go     コミットメッセージの英訳(DeepL / MyMemory)
+translate.go     コミットメッセージの英訳(DeepL / MyMemory)、エンジン選択
 *_test.go        Goのテスト(`go test ./...`)
 ui/              UI本体(Goバイナリに埋め込み)
   index.html       マークアップ

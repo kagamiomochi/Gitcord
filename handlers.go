@@ -369,9 +369,14 @@ func (s *server) handleReflog(r *http.Request) (any, error) {
 }
 
 func (s *server) handleTranslate(r *http.Request) (any, error) {
-	in, err := decode[struct{ Text string }](r)
+	in, err := decode[struct {
+		Text          string
+		Engine        string
+		DeepLKey      string
+		MyMemoryEmail string
+	}](r)
 	if err != nil {
 		return nil, err
 	}
-	return translate(in.Text)
+	return translate(in.Text, trConfig{in.Engine, in.DeepLKey, in.MyMemoryEmail})
 }

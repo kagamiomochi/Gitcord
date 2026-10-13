@@ -1,4 +1,4 @@
-// ---- Settings dialog: send key and commit prefixes ----
+// ---- Settings dialog: send key, commit prefixes and translation ----
 // Every change is saved to localStorage immediately and applied live.
 
 // Apply CFG to the composer: rebuild prefix buttons, placeholder, and redraw log badges
@@ -14,6 +14,12 @@ function applyCfg() {
 function openSettings() {
   document.querySelectorAll('input[name=sk]').forEach(r => (r.checked = r.value === CFG.sendKey));
   drawPfList();
+  document
+    .querySelectorAll('input[name=te]')
+    .forEach(r => (r.checked = r.value === CFG.translate.engine));
+  $('dlk').value = CFG.translate.deeplKey;
+  $('mme').value = CFG.translate.mymemoryEmail;
+  $('trres').textContent = '';
   $('smodal').style.display = 'grid';
 }
 function closeSettings() {
@@ -87,6 +93,31 @@ function resetPf() {
   if (!confirm('プレフィックスを初期設定に戻します。よろしいですか?')) return;
   CFG.prefixes = DEF_PF.map(p => ({ ...p }));
   changedPf();
+}
+// ---- Translation settings ----
+function setTrEngine(v) {
+  if (!TR_ENGINES.includes(v)) return;
+  CFG.translate.engine = v;
+  saveCfg();
+}
+// Field is 'deeplKey' or 'mymemoryEmail'; the value is trimmed and saved on change
+function setTrField(field, v) {
+  CFG.translate[field] = v.trim();
+  saveCfg();
+}
+// Send a short sample through the current settings so a wrong key shows up right away
+async function testTranslate() {
+  const out = $('trres');
+  out.className = 'mu';
+  out.textContent = 'テスト中...';
+  try {
+    const r = await A('translate', trBody('こんにちは、世界'));
+    out.className = 'mu ok';
+    out.textContent = '成功: ' + r;
+  } catch (e) {
+    out.className = 'mu bad';
+    out.textContent = '失敗: ' + e.message;
+  }
 }
 $('smodal').onclick = e => {
   if (e.target === e.currentTarget) closeSettings();

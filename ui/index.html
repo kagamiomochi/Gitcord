@@ -131,6 +131,62 @@
           </div>
           <div class="pr"><button onclick="resetPf()">初期設定に戻す</button></div>
         </section>
+        <section>
+          <h4>英訳</h4>
+          <label class="opt"
+            ><input type="radio" name="te" value="auto" onchange="setTrEngine(this.value)" />自動
+            (DeepLのキーがあればDeepL、なければMyMemory)</label
+          >
+          <label class="opt"
+            ><input
+              type="radio"
+              name="te"
+              value="deepl"
+              onchange="setTrEngine(this.value)"
+            />DeepL</label
+          >
+          <label class="opt"
+            ><input
+              type="radio"
+              name="te"
+              value="mymemory"
+              onchange="setTrEngine(this.value)"
+            />MyMemory</label
+          >
+          <div class="mu">DeepL APIキー (未入力なら環境変数 GITCORD_DEEPL_KEY を使用)</div>
+          <input
+            class="tf"
+            id="dlk"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="xxxxxxxx-xxxx-...:fx"
+            onchange="setTrField('deeplKey', this.value)"
+          />
+          <div class="mu">
+            末尾が :fx
+            のキーは無料版(api-free.deepl.com)、それ以外は有料版(api.deepl.com)に接続します
+          </div>
+          <div class="mu">
+            MyMemory 連絡用メールアドレス (任意。入力すると無料枠が5,000→50,000文字/日に増えます)
+          </div>
+          <input
+            class="tf"
+            id="mme"
+            type="email"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="you@example.com"
+            onchange="setTrField('mymemoryEmail', this.value)"
+          />
+          <div class="pr">
+            <button onclick="testTranslate()">接続テスト</button>
+            <span class="mu" id="trres"></span>
+          </div>
+          <div class="mu">
+            設定はこの端末のlocalStorageに平文で保存されます。APIキーは英訳時にのみ、ローカルサーバー経由でDeepLに送られます。
+          </div>
+        </section>
         <div class="acts"><button class="pri" onclick="closeSettings()">閉じる</button></div>
       </div>
     </div>

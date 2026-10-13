@@ -14,17 +14,71 @@ import (
 // Shared client with a timeout so a slow network never hangs the commit flow
 var trClient = &http.Client{Timeout: 10 * time.Second}
 
-// translate prefers DeepL when a key is configured, otherwise uses MyMemory
-func translate(text string) (string, error) {
-	if key := os.Getenv("GITCORD_DEEPL_KEY"); key != "" {
-		return translateDeepL(text, key)
+// trConfig is the translation setting sent from the settings dialog.
+// Empty fields fall back to the environment variables.
+type trConfig struct {
+	Engine        string // "auto" (default), "deepl" or "mymemory"
+	DeepLKey      string
+	MyMemoryEmail string
+}
+
+// resolve fills empty fields from the environment and trims whitespace.
+func (c trConfig) resolve() trConfig {
+	c.Engine = strings.TrimSpace(c.Engine)
+	c.DeepLKey = strings.TrimSpace(c.DeepLKey)
+	c.MyMemoryEmail = strings.TrimSpace(c.MyMemoryEmail)
+	if c.DeepLKey == "" {
+		c.DeepLKey = strings.TrimSpace(os.Getenv("GITCORD_DEEPL_KEY"))
 	}
-	return translateMyMemory(text)
+	if c.MyMemoryEmail == "" {
+		c.MyMemoryEmail = strings.TrimSpace(os.Getenv("GITCORD_MYMEMORY_EMAIL"))
+	}
+	return c
+}
+
+// pickEngine returns "deepl" or "mymemory" for an already resolved config.
+func pickEngine(c trConfig) (string, error) {
+	switch c.Engine {
+	case "deepl":
+		if c.DeepLKey == "" {
+			return "", errors.New("DeepLのAPIキーが設定されていません")
+		}
+		return "deepl", nil
+	case "mymemory":
+		return "mymemory", nil
+	case "", "auto":
+		if c.DeepLKey != "" {
+			return "deepl", nil
+		}
+		return "mymemory", nil
+	}
+	return "", errors.New("不明な翻訳エンジンです")
+}
+
+// deeplEndpoint picks the API host by key type: free-plan keys end with ":fx"
+func deeplEndpoint(key string) string {
+	if strings.HasSuffix(key, ":fx") {
+		return "https://api-free.deepl.com/v2/translate"
+	}
+	return "https://api.deepl.com/v2/translate"
+}
+
+// translate uses the engine chosen in the settings (auto: DeepL when a key exists, else MyMemory)
+func translate(text string, cfg trConfig) (string, error) {
+	cfg = cfg.resolve()
+	engine, err := pickEngine(cfg)
+	if err != nil {
+		return "", err
+	}
+	if engine == "deepl" {
+		return translateDeepL(text, cfg.DeepLKey)
+	}
+	return translateMyMemory(text, cfg.MyMemoryEmail)
 }
 
 func translateDeepL(text, key string) (string, error) {
 	form := url.Values{"text": {text}, "target_lang": {"EN"}}
-	req, err := http.NewRequest("POST", "https://api-free.deepl.com/v2/translate", strings.NewReader(form.Encode()))
+	req, err := http.NewRequest("POST", deeplEndpoint(key), strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", err
 	}
@@ -35,6 +89,9 @@ func translateDeepL(text, key string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusForbidden {
+		return "", errors.New("DeepLのAPIキーが正しくありません")
+	}
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("DeepLがHTTP %dを返しました", resp.StatusCode)
 	}
@@ -50,14 +107,14 @@ func translateDeepL(text, key string) (string, error) {
 }
 
 // translateMyMemory translates line by line to stay under the per-request size limit
-func translateMyMemory(text string) (string, error) {
+func translateMyMemory(text, mail string) (string, error) {
 	lines := strings.Split(text, "\n")
 	for i, ln := range lines {
 		// Skip empty or ASCII-only lines, there is nothing to translate
 		if strings.TrimSpace(ln) == "" || !hasNonASCII(ln) {
 			continue
 		}
-		t, err := myMemoryLine(ln)
+		t, err := myMemoryLine(ln, mail)
 		if err != nil {
 			return "", err
 		}
@@ -75,10 +132,10 @@ func hasNonASCII(s string) bool {
 	return false
 }
 
-func myMemoryLine(s string) (string, error) {
+func myMemoryLine(s, mail string) (string, error) {
 	q := url.Values{"q": {s}, "langpair": {"ja|en"}}
 	// Optional contact email raises the daily quota from 5k to 50k chars
-	if mail := os.Getenv("GITCORD_MYMEMORY_EMAIL"); mail != "" {
+	if mail != "" {
 		q.Set("de", mail)
 	}
 	resp, err := trClient.Get("https://api.mymemory.translated.net/get?" + q.Encode())

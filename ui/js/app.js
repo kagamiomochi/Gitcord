@@ -519,7 +519,7 @@ async function doCommit(push) {
       if ($('tr').checked && /[^\x00-\x7f]/.test(m)) {
         stat('英訳中');
         try {
-          m = await A('translate', { text: m });
+          m = await A('translate', trBody(m));
         } catch (e) {
           if (!confirm('英訳に失敗しました: ' + e.message + '\n原文のままコミットしますか?'))
             return;

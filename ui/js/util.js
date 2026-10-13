@@ -119,6 +119,8 @@ const validPf = p =>
   PF_NAME_RE.test(p.name) &&
   p.name !== 'none' &&
   /^#[0-9a-f]{6}$/i.test(p.color);
+// Translation engines selectable in the settings dialog
+const TR_ENGINES = ['auto', 'deepl', 'mymemory'];
 function loadCfg() {
   let c = {};
   try {
@@ -132,7 +134,14 @@ function loadCfg() {
         .filter(p => validPf(p) && !seen.has(p.name) && seen.add(p.name))
         .map(p => ({ name: p.name, color: p.color }))
     : DEF_PF.map(p => ({ ...p }));
-  return { sendKey: c.sendKey in SEND_HINT ? c.sendKey : 'ctrl', prefixes };
+  const t = c.translate && typeof c.translate === 'object' ? c.translate : {};
+  const str = v => (typeof v === 'string' ? v.trim() : '');
+  const translate = {
+    engine: TR_ENGINES.includes(t.engine) ? t.engine : 'auto',
+    deeplKey: str(t.deeplKey),
+    mymemoryEmail: str(t.mymemoryEmail),
+  };
+  return { sendKey: c.sendKey in SEND_HINT ? c.sendKey : 'ctrl', prefixes, translate };
 }
 function saveCfg() {
   try {
@@ -142,6 +151,13 @@ function saveCfg() {
   }
 }
 let CFG = loadCfg();
+// Translation request body: text plus the engine settings from CFG
+const trBody = text => ({
+  text,
+  engine: CFG.translate.engine,
+  deeplKey: CFG.translate.deeplKey,
+  mymemoryEmail: CFG.translate.mymemoryEmail,
+});
 // Derived tables: PF (button order), PFC (color per prefix), PFRE (parses a commit subject)
 let PF, PFC, PFRE;
 function rebuildPf() {
@@ -151,9 +167,7 @@ function rebuildPf() {
   PFC.none = NONE_COLOR;
   const alt = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   // With no custom prefixes the pattern must never match (an empty group would match everything)
-  PFRE = alt
-    ? new RegExp(`^(${alt})(\\([^)]*\\))?!?:\\s*([\\s\\S]*)$`)
-    : /(?!)/;
+  PFRE = alt ? new RegExp(`^(${alt})(\\([^)]*\\))?!?:\\s*([\\s\\S]*)$`) : /(?!)/;
 }
 rebuildPf();
 // Render a commit subject with its prefix as a colored badge

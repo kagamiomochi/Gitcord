@@ -1193,6 +1193,25 @@ body.dv {
   padding: 6px 7px;
   font: inherit;
 }
+#smodal .tf {
+  background: var(--bg0);
+  border: 0;
+  color: var(--tx);
+  border-radius: 4px;
+  padding: 6px 7px;
+  font: inherit;
+}
+#smodal .pr .mu {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#smodal .mu.ok {
+  color: var(--ok, #23a559);
+}
+#smodal .mu.bad {
+  color: var(--err);
+}
 #smodal .pr.fixed {
   color: var(--mu);
 }
