@@ -150,3 +150,71 @@ func TestRejectsOptionLikeInput(t *testing.T) {
 		t.Error("clone executed an injected command")
 	}
 }
+
+func TestOpen(t *testing.T) {
+	ts, repo := newTestServer(t)
+	post(t, ts, "add", map[string]string{"Path": repo})
+
+	// Replace xdg-open with a script that records the path it was given
+	log := filepath.Join(t.TempDir(), "opened")
+	script := filepath.Join(t.TempDir(), "fake-open")
+	os.WriteFile(script, []byte("#!/bin/sh\necho \"$1\" > "+log+"\n"), 0o755)
+	old := opener
+	opener = script
+	t.Cleanup(func() { opener = old })
+	t.Cleanup(cleanOpenDir)
+
+	opened := func() string {
+		b, _ := os.ReadFile(log)
+		os.Remove(log)
+		return strings.TrimSpace(string(b))
+	}
+
+	// Working-tree file is opened in place
+	if code, b := post(t, ts, "open", map[string]string{"Repo": repo, "Path": "a.txt"}); code != 200 {
+		t.Fatalf("open: %d %s", code, b)
+	}
+	if got := opened(); got != filepath.Join(repo, "a.txt") {
+		t.Fatalf("opened %q, want working-tree file", got)
+	}
+
+	// A past revision is extracted to a read-only copy
+	if code, b := post(t, ts, "open", map[string]string{"Repo": repo, "Path": "a.txt", "Rev": "HEAD~1"}); code != 200 {
+		t.Fatalf("open rev: %d %s", code, b)
+	}
+	got := opened()
+	if body, _ := os.ReadFile(got); string(body) != "one\n" || filepath.Base(got) != "a.txt" {
+		t.Fatalf("copy %q = %q", got, body)
+	}
+
+	// A deleted working-tree file falls back to HEAD
+	os.Remove(filepath.Join(repo, "a.txt"))
+	if code, _ := post(t, ts, "open", map[string]string{"Repo": repo, "Path": "a.txt"}); code != 200 {
+		t.Fatalf("open deleted: %d", code)
+	}
+	if got := opened(); strings.HasPrefix(got, repo) {
+		t.Fatalf("deleted file should open a copy, got %q", got)
+	}
+
+	// Rejected input: path escape, absolute path, unregistered repo, option-like rev
+	for name, body := range map[string]map[string]string{
+		"escape":   {"Repo": repo, "Path": "../x"},
+		"absolute": {"Repo": repo, "Path": "/etc/passwd"},
+		"unknown":  {"Repo": t.TempDir(), "Path": "a.txt"},
+		"badrev":   {"Repo": repo, "Path": "a.txt", "Rev": "--output=/tmp/x"},
+	} {
+		if code, _ := post(t, ts, "open", body); code != 400 {
+			t.Errorf("%s: want 400, got %d", name, code)
+		}
+	}
+
+	// Non-JSON content types (cross-origin simple requests) are refused
+	resp, err := http.Post(ts.URL+"/api/open", "text/plain", strings.NewReader(`{"Repo":"`+repo+`","Path":"a.txt"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 400 {
+		t.Errorf("text/plain should be refused, got %d", resp.StatusCode)
+	}
+}

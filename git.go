@@ -21,16 +21,7 @@ func gitEnv(repo string, extra []string, args ...string) (string, error) {
 		args = append([]string{"-C", repo}, args...)
 	}
 	c := exec.Command("git", args...)
-
-	// Do not leak AppImage's bundled library path into system git
-	env := make([]string, 0, len(os.Environ())+2)
-	for _, e := range os.Environ() {
-		if strings.HasPrefix(e, "LD_LIBRARY_PATH=") || strings.HasPrefix(e, "LD_PRELOAD=") {
-			continue
-		}
-		env = append(env, e)
-	}
-	c.Env = append(append(env, "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8"), extra...)
+	c.Env = append(append(cleanEnv(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8"), extra...)
 
 	// Keep stdout and stderr separate so warnings never end up in parsed output
 	var stdout, stderr bytes.Buffer
@@ -52,4 +43,17 @@ func checkRev(rev string) error {
 		return errors.New("invalid revision")
 	}
 	return nil
+}
+
+// cleanEnv returns the current environment without AppImage's bundled library
+// path, so that child processes (git, xdg-open) use the system libraries.
+func cleanEnv() []string {
+	env := make([]string, 0, len(os.Environ())+2)
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(e, "LD_LIBRARY_PATH=") || strings.HasPrefix(e, "LD_PRELOAD=") {
+			continue
+		}
+		env = append(env, e)
+	}
+	return env
 }

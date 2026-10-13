@@ -79,10 +79,11 @@ function renderPlain(t) {
     .join('');
 }
 // One row of a changed-file list: leading (checkbox/chip) + name + directory
-function fileRow({ path, title, onclick, lead }) {
+// ondbl: JS run on double-click (open the file externally)
+function fileRow({ path, title, onclick, ondbl, lead }) {
   const { name, dir } = splitPath(path);
   const t = title ? ` title="${esc(title)}"` : '';
-  return `<div class="f cf"${t} onclick="${onclick}">${lead}<span class="cl"><span class="nm">${esc(name)}</span><span class="dir">${esc(dir)}</span></span></div>`;
+  return `<div class="f cf"${t} onclick="${onclick}" ondblclick="${ondbl}">${lead}<span class="cl"><span class="nm">${esc(name)}</span><span class="dir">${esc(dir)}</span></span></div>`;
 }
 
 // Stable avatar background derived from a string (same name always gets the same color)

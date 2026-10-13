@@ -384,7 +384,12 @@ async function drawRight() {
             const lead =
               `<input type="checkbox" ${f.staged ? 'checked' : ''} onclick="event.stopPropagation()" onchange="stage(${i},this.checked)">` +
               `<span class="chip c${l}" title="${esc(f.x + f.y)}">${l}</span>`;
-            return fileRow({ path: f.path, onclick: `showDiff(${i})`, lead });
+            return fileRow({
+              path: f.path,
+              onclick: `showDiff(${i})`,
+              ondbl: `openExt(S._st[${i}].path)`,
+              lead,
+            });
           })
           .join('')
       : '<div class="empty">未コミットの変更はありません</div>';
@@ -416,6 +421,7 @@ async function drawCommitChanges() {
               path: f.path,
               title: f.old ? f.old + ' → ' + f.path : f.path,
               onclick: `showCDiff(${i})`,
+              ondbl: `openExt(S._cs[${i}].path, S.sel)`,
               lead: `<span class="chip c${esc(f.status)}">${esc(f.status)}</span>`,
             }),
           )
@@ -453,7 +459,7 @@ function drawTree() {
       .map(k =>
         typeof n[k] === 'object'
           ? `<details ${d === 0 || q ? 'open' : ''}><summary>${ICO.chev}${ICO.dir}<span class="nm">${esc(k)}</span><span class="cn">${cnt(n[k])}</span></summary><div class="kids">${R(n[k], d + 1)}</div></details>`
-          : `<div class="f t ${S.file === n[k] ? 'on' : ''}" data-p="${esc(n[k])}" onclick="openFile(this.dataset.p)"><span class="sp"></span><span style="color:${extColor(k)};display:flex">${ICO.file}</span><span class="nm">${esc(k)}</span></div>`,
+          : `<div class="f t ${S.file === n[k] ? 'on' : ''}" data-p="${esc(n[k])}" onclick="openFile(this.dataset.p)" ondblclick="openExt(this.dataset.p, S.sel)"><span class="sp"></span><span style="color:${extColor(k)};display:flex">${ICO.file}</span><span class="nm">${esc(k)}</span></div>`,
       )
       .join('');
   $('tree').innerHTML =
@@ -488,6 +494,14 @@ async function showDiff(i) {
   );
 }
 // Open a file from the file browser: show its content (at the selected commit, or HEAD) without diff coloring
+// Open a file with the OS default application (double-click).
+// rev empty: the working-tree file; otherwise a read-only copy of that commit's version
+function openExt(p, rev) {
+  return T(async () => {
+    await A('open', { repo: S.cur, path: p, rev: rev || '' });
+    toast('開きました: ' + splitPath(p).name, true);
+  });
+}
 async function openFile(p) {
   S.file = p;
   document.querySelectorAll('#tree .f').forEach(e => e.classList.toggle('on', e.dataset.p === p));

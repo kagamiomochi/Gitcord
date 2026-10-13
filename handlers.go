@@ -48,6 +48,7 @@ func (s *server) routes() http.Handler {
 	api("log", s.handleLog)
 	api("tree", s.handleTree)
 	api("file", s.handleFile)
+	api("open", s.handleOpen)
 	api("diff", s.handleDiff)
 	api("changes", s.handleChanges)
 	api("status", s.handleStatus)

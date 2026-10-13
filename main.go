@@ -30,6 +30,7 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	cleanOpenDir()
 	srv := &server{repos: newRepoStore(), ui: ui}
 
 	ln, err := net.Listen("tcp", *addr)
