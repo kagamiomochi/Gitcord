@@ -7,6 +7,7 @@ const $ = id => document.getElementById(id),
 const ICO = {
   dir: '<svg class="ic" viewBox="0 0 16 16"><path d="M1.5 3.5a1 1 0 0 1 1-1h3.2l1.4 1.5h6.4a1 1 0 0 1 1 1v7.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z" fill="currentColor"/></svg>',
   file: '<svg class="ic" viewBox="0 0 16 16"><path d="M3.5 1.5h5.6l3.4 3.4v9a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-11.4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M9 1.7V5h3.3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
+  tag: '<svg class="ic" viewBox="0 0 16 16"><path d="M1.5 2.5h5.8l7 7a1 1 0 0 1 0 1.4l-3.9 3.9a1 1 0 0 1-1.4 0l-7-7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="5" cy="5.5" r="1.1" fill="currentColor"/></svg>',
   chev: '<svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 const EC = {
@@ -36,6 +37,7 @@ let S = {
   repos: [],
   cur: null,
   commits: [],
+  tags: {}, // commit hash -> names of the tags pointing at it
   up: new Set(),
   sel: null,
   pf: null,
@@ -177,6 +179,11 @@ function subj(t) {
   if (!m) return esc(t);
   return `<span class="pfx" style="--pc:${PFC[m[1]]}">${m[1]}${esc(m[2] || '')}</span>${esc(m[3])}`;
 }
+// Tag badges shown next to a commit in the log
+const tagBadges = h =>
+  (S.tags[h] || [])
+    .map(n => `<span class="gtag" title="タグ: ${esc(n)}">${ICO.tag}${esc(n)}</span>`)
+    .join('');
 // Date divider shown when a commit falls on a different local day than the previous one
 function dayDiv(c, prev) {
   const d = new Date(c.Time * 1000);

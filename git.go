@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -17,10 +18,15 @@ func git(repo string, args ...string) (string, error) {
 
 // gitEnv is git with extra environment variables (KEY=VALUE) for the child process.
 func gitEnv(repo string, extra []string, args ...string) (string, error) {
+	return gitEnvCtx(context.Background(), repo, extra, args...)
+}
+
+// gitEnvCtx is gitEnv that kills git when ctx ends, for commands that touch the network.
+func gitEnvCtx(ctx context.Context, repo string, extra []string, args ...string) (string, error) {
 	if repo != "" {
 		args = append([]string{"-C", repo}, args...)
 	}
-	c := exec.Command("git", args...)
+	c := exec.CommandContext(ctx, "git", args...)
 	c.Env = append(append(cleanEnv(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C.UTF-8"), extra...)
 
 	// Keep stdout and stderr separate so warnings never end up in parsed output

@@ -126,6 +126,7 @@ async function refresh(bottom) {
   const l = await A('log?repo=' + encodeURIComponent(S.cur));
   S.commits = l.commits.reverse();
   S.up = new Set(l.unpushed);
+  S.tags = l.tags || {};
   upd();
   drawLog(bottom);
   drawRight();
@@ -141,7 +142,7 @@ function drawLog(bottom) {
       .map(
         (c, i) =>
           dayDiv(c, S.commits[i - 1]) +
-          `<div class="c ${S.up.has(c.Hash) ? 'up' : ''} ${S.sel === c.Hash ? 'sel' : ''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av" style="${hue(c.Author)}">${esc(c.Author[0] || '?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</time>${S.up.has(c.Hash) ? '<span class="tag">未プッシュ</span>' : ''}<div>${subj(c.Subject)}</div><code>${c.Hash.slice(0, 8)}</code></div></div>`,
+          `<div class="c ${S.up.has(c.Hash) ? 'up' : ''} ${S.sel === c.Hash ? 'sel' : ''}" data-h="${c.Hash}" onclick="selC('${c.Hash}')" oncontextmenu="cMenu(event,'${c.Hash}')"><div class="av" style="${hue(c.Author)}">${esc(c.Author[0] || '?')}</div><div class="m"><b>${esc(c.Author)}</b><time>${new Date(c.Time * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</time>${S.up.has(c.Hash) ? '<span class="tag">未プッシュ</span>' : ''}${tagBadges(c.Hash)}<div>${subj(c.Subject)}</div><code>${c.Hash.slice(0, 8)}</code></div></div>`,
       )
       .join('');
   m.scrollTop = bottom ? m.scrollHeight : m.scrollHeight - keep;
@@ -156,6 +157,14 @@ function selC(h) {
 // Warning appended to confirmations when an action rewrites already pushed commits
 const PUSHED_WARN =
   'このコミットはpush済みです。履歴を書き換えると、反映にforce pushが必要になります。\n他の環境で取得済みの場合は履歴が食い違います。';
+// Rewriting history leaves tags on the old commits; name the ones on commit index i or later
+function tagWarn(i) {
+  if (i < 0) return '';
+  const names = S.commits.slice(i).flatMap(c => S.tags[c.Hash] || []);
+  return names.length
+    ? `タグ(${names.join(', ')})は書き換え前のコミットに残り、新しい履歴からは外れます。`
+    : '';
+}
 // Actions after which commit hashes change, so a selected commit may no longer exist
 const REWRITES = new Set(['soft', 'mixed', 'hard', 'reword', 'drop', 'fixup', 'restore']);
 function cMenu(e, h) {
@@ -166,7 +175,11 @@ function cMenu(e, h) {
   // The log is capped, so only a short history is known to start at the real first commit
   const isRoot = i === 0 && S.commits.length < 5000;
   const isHead = i === S.commits.length - 1;
-  const ask = (msg, rewrites) => (rewrites && pushed ? msg + '\n\n' + PUSHED_WARN : msg);
+  // from: first commit index whose hash changes, used to list the tags that would be left behind
+  const ask = (msg, rewrites, from = i) =>
+    [msg, ...(rewrites ? [pushed ? PUSHED_WARN : '', tagWarn(from)] : [])]
+      .filter(Boolean)
+      .join('\n\n');
   // Run a history action; msg (optional) asks for confirmation first
   const run = (a, msg) => () => {
     if (msg && !confirm(msg)) return;
@@ -185,6 +198,8 @@ function cMenu(e, h) {
     ],
     null,
     ['メッセージを編集', () => editMsg(h, pushed)],
+    ['タグを作成...', () => openTags(h)],
+    ...(S.tags[h] || []).map(n => [`タグ「${n}」を削除`, () => delTag(n, false), 'x']),
   ];
   if (!isRoot) {
     items.push(
@@ -218,12 +233,15 @@ function cMenu(e, h) {
       null,
       [
         'reset --soft (変更を残す・ステージ維持)',
-        run('soft', ask('このコミットまで戻します。', true)),
+        run('soft', ask('このコミットまで戻します。', true, i + 1)),
       ],
-      ['reset --mixed (変更を残す)', run('mixed', ask('このコミットまで戻します。', true))],
+      ['reset --mixed (変更を残す)', run('mixed', ask('このコミットまで戻します。', true, i + 1))],
       [
         'reset --hard (変更を破棄)',
-        run('hard', ask('このコミットまで戻し、以降の変更を破棄します。よろしいですか?', true)),
+        run(
+          'hard',
+          ask('このコミットまで戻し、以降の変更を破棄します。よろしいですか?', true, i + 1),
+        ),
         'x',
       ],
     );
@@ -275,9 +293,14 @@ async function editMsg(h, pushed) {
   if (typeof m !== 'string') return;
   S.edit = { h, pushed };
   $('emsg').value = m;
-  $('ehint').textContent = pushed
-    ? 'push済みのコミットです。保存すると履歴が書き換わり、反映にはforce pushが必要になります。'
-    : '';
+  $('ehint').textContent = [
+    pushed
+      ? 'push済みのコミットです。保存すると履歴が書き換わり、反映にはforce pushが必要になります。'
+      : '',
+    tagWarn(S.commits.findIndex(c => c.Hash === h)),
+  ]
+    .filter(Boolean)
+    .join('\n');
   $('emodal').style.display = 'grid';
   $('emsg').focus();
 }

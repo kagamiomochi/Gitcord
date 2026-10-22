@@ -58,6 +58,11 @@ func (s *server) routes() http.Handler {
 	api("action", s.handleAction)
 	api("reflog", s.handleReflog)
 	api("message", s.handleMessage)
+	api("tags", s.handleTags)
+	api("tagadd", s.handleTagAdd)
+	api("tagdel", s.handleTagDel)
+	api("tagpush", s.handleTagPush)
+	api("tagremote", s.handleTagRemote)
 	api("translate", s.handleTranslate)
 
 	mux.Handle("/", http.FileServerFS(s.ui))
@@ -160,10 +165,11 @@ func (s *server) handleLog(r *http.Request) (any, error) {
 	repo := query(r, "repo")
 	out, err := git(repo, "log", "-n", "5000", logFormat)
 	if err != nil {
-		return map[string]any{"commits": []commit{}, "unpushed": []string{}}, nil
+		return map[string]any{"commits": []commit{}, "unpushed": []string{}, "tags": map[string][]string{}}, nil
 	}
 	up, _ := git(repo, "rev-list", "HEAD", "--not", "--remotes")
-	return map[string]any{"commits": parseLog(out), "unpushed": strings.Fields(up)}, nil
+	// tags maps a commit hash to the names of the tags that point at it
+	return map[string]any{"commits": parseLog(out), "unpushed": strings.Fields(up), "tags": tagsByCommit(repo)}, nil
 }
 
 func (s *server) handleTree(r *http.Request) (any, error) {
